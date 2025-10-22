@@ -1,0 +1,205 @@
+/* ======== LAYOUT BASE ======== */
+body {
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  background-color: #f4f6fb;
+  color: #222;
+  margin: 0;
+  padding: 0;
+}
+
+main {
+  max-width: 1100px;
+  margin: 40px auto;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  padding: 30px 40px;
+}
+
+/* ======== CABEÇALHO ======== */
+h1 {
+  color: #1E46E6;
+  font-weight: 800;
+  font-size: 1.9rem;
+  margin-top: 0;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+}
+
+label {
+  font-weight: 600;
+}
+
+select {
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 0.95rem;
+}
+
+/* ======== BOTÕES DE SEMANA ======== */
+.week-nav {
+  display: flex;
+  gap: 10px;
+  margin: 15px 0 20px;
+}
+
+.week-nav button {
+  background-color: #1E46E6;
+  color: #fff;
+  border: none;
+  padding: 7px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.week-nav button:hover {
+  background-color: #0d2dbb;
+  transform: translateY(-1px);
+}
+
+/* ======== DICA ======== */
+.tip {
+  font-size: 0.9rem;
+  color: #444;
+  margin: 10px 0 20px;
+}
+
+/* ======== BARRA DE MESES ======== */
+.meses-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 15px 0 25px;
+}
+
+.meses-bar button {
+  background: linear-gradient(90deg, #1E46E6, #000);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.meses-bar button:hover {
+  transform: translateY(-2px);
+  background: linear-gradient(90deg, #2c52ff, #111);
+}
+
+.meses-bar button.active {
+  background: #FFD500;
+  color: #000;
+}
+
+/* ======== CALENDÁRIO ======== */
+.calendar {
+  margin-top: 20px;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.grid.header {
+  display: grid;
+  grid-template-columns: 90px repeat(5, 1fr);
+  background-color: #1E46E6;
+  color: #fff;
+  font-weight: 700;
+  text-align: center;
+  height: 45px;
+  align-items: center;
+}
+
+.grid.body {
+  display: flex;
+  flex-direction: column;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 90px repeat(5, 1fr);
+}
+
+.time-cell,
+.slot-cell {
+  border: 1px solid #e6e6e6;
+  text-align: center;
+  font-size: 0.9rem;
+  padding: 8px;
+}
+
+.time-cell {
+  background-color: #fafafa;
+  font-weight: 600;
+  color: #333;
+}
+
+.slot-cell.free:hover {
+  background-color: #eaf0ff;
+  cursor: pointer;
+}
+
+.slot-cell.busy {
+  background-color: #ff7b7b;
+  color: #fff;
+  font-weight: 600;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+}
+
+/* ======== TEXTO DE SEMANA ======== */
+#semanaAtual {
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+/* ======== MODAL ======== */
+dialog {
+  border: none;
+  border-radius: 14px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  padding: 25px;
+  background: #fff;
+  max-width: 400px;
+}
+
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(2px);
+}
+
+menu {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 15px;
+}
+
+button.primary {
+  background: #1E46E6;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+button.primary:hover {
+  background: #0d2dbb;
+}
+
+/* ======== SCROLLBAR ======== */
+::-webkit-scrollbar {
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: #1E46E6;
+  border-radius: 10px;
+}
+

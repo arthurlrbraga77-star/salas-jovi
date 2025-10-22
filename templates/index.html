@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JOVI — Meeting Room Booking</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+  <main>
+    <h1>JOVI — Meeting Room Booking</h1>
+
+    <div class="sala-select">
+      <label for="salaSelect">Room:</label>
+      <select id="salaSelect">
+        <option>Room 1</option>
+        <option>Room 2</option>
+      </select>
+    </div>
+
+    <div class="week-nav">
+      <button id="semanaAnterior">◀ Week</button>
+      <button id="semanaAtualBtn">Today</button>
+      <button id="semanaProxima">Week ▶</button>
+    </div>
+
+    <p class="tip">
+      💡 Tip: click on a free time slot to book. Choose a duration (30m to 4h) and, if you want, mark it as weekly recurring.
+    </p>
+
+    <div class="meses-bar" id="mesBar">
+      <button data-mes="0">Jan</button>
+      <button data-mes="1">Feb</button>
+      <button data-mes="2">Mar</button>
+      <button data-mes="3">Apr</button>
+      <button data-mes="4">May</button>
+      <button data-mes="5">Jun</button>
+      <button data-mes="6">Jul</button>
+      <button data-mes="7">Aug</button>
+      <button data-mes="8">Sep</button>
+      <button data-mes="9">Oct</button>
+      <button data-mes="10">Nov</button>
+      <button data-mes="11">Dec</button>
+    </div>
+
+    <p id="semanaAtual"></p>
+
+    <div class="calendar">
+      <div class="grid header"></div>
+      <div class="grid body"></div>
+    </div>
+  </main>
+
+  <!-- Reservation Modal -->
+  <dialog id="reservaModal">
+    <h2>New Reservation</h2>
+    <p id="infoDia"></p>
+
+    <label for="nome">Name/Title:</label>
+    <input type="text" id="nome" placeholder="e.g. Sales Meeting"><br />
+
+    <label for="email">E-mail:</label>
+    <input type="email" id="email" placeholder="example@jovimobile.com"><br />
+
+    <label for="duracao">Duration:</label>
+    <select id="duracao">
+      <option value="0.5">30 min</option>
+      <option value="1">1 hour</option>
+      <option value="2">2 hours</option>
+      <option value="3">3 hours</option>
+      <option value="4">4 hours</option>
+    </select><br />
+
+    <label><input type="checkbox" id="repetir"> Repeat weekly (∞)</label>
+
+    <menu>
+      <button id="cancelar">Cancel</button>
+      <button id="confirmar" class="primary">Confirm</button>
+    </menu>
+  </dialog>
+
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
