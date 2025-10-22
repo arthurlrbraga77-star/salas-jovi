@@ -30,7 +30,7 @@ def load_data():
     garantir_arquivo_local()
 
     try:
-        ensure_file_exists(file_name="reservas.json", folder_id=GOOGLE_FOLDER_ID, local_path=LOCAL_TEMP_FILE)
+        ensure_file_exists(local_path=LOCAL_TEMP_FILE)
         print("☁️ Arquivo verificado/baixado do Drive.")
     except Exception as e:
         print(f"⚠️ Falha ao sincronizar com o Drive: {e}")
@@ -61,7 +61,7 @@ def save_data(data):
 
     # Tenta enviar para o Drive
     try:
-        upload_file(LOCAL_TEMP_FILE, file_name="reservas.json", folder_id=GOOGLE_FOLDER_ID)
+        upload_file(local_path=LOCAL_TEMP_FILE)
         print("✅ Arquivo sincronizado com o Google Drive.")
     except Exception as e:
         print(f"⚠️ Falha ao sincronizar com o Drive: {e}")
