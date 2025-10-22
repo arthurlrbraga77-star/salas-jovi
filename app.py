@@ -30,7 +30,7 @@ def load_data():
     garantir_arquivo_local()
 
     try:
-        ensure_file_exists(local_path=LOCAL_TEMP_FILE)
+        upload_file(local_path=LOCAL_TEMP_FILE)
         print("☁️ Arquivo verificado/baixado do Drive.")
     except Exception as e:
         print(f"⚠️ Falha ao sincronizar com o Drive: {e}")
