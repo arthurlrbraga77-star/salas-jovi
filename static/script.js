@@ -74,6 +74,10 @@ async function salvarReservasServidor(novas) {
 // ===============================
 async function gerarCalendario() {
   await carregarReservas();
+  const salaSelecionada = document.querySelector("#salaSelect").value;
+
+  // Opção A: ignorar reservas sem sala
+  const reservasSala = reservas.filter(r => r.sala && r.sala === salaSelecionada);
 
   const inicioSemana = inicioDaSemana(currentDate);
   const dias = Array.from({ length: 5 }, (_, i) => {
@@ -115,8 +119,9 @@ async function gerarCalendario() {
     dias.forEach((dia) => {
       const slot = document.createElement("div");
       slot.classList.add("slot-cell");
+
       const chave = `${ymd(dia)}T${hora}`;
-      const reserva = reservas.find((r) => r.data === chave);
+      const reserva = reservasSala.find(r => r.data.startsWith(chave));
 
       if (reserva) {
         slot.classList.add("busy");
@@ -124,9 +129,7 @@ async function gerarCalendario() {
         slot.title = `${reserva.nome || "Meeting"} — ${reserva.email || ""}`;
 
         slot.addEventListener("click", async () => {
-          const senha = prompt(
-            `To cancel "${reserva.nome}", please enter the admin password:`
-          );
+          const senha = prompt(`To cancel "${reserva.nome}", please enter the admin password:`);
           if (senha === null) return;
 
           const res = await fetch("/api/reservas/delete", {
@@ -157,111 +160,84 @@ async function gerarCalendario() {
     body.appendChild(linha);
   });
 
-  document.querySelector("#semanaAtual").textContent = `Week: ${
-    dias[0].toLocaleDateString("en-US")
-  } - ${dias[4].toLocaleDateString("en-US")}`;
+  document.querySelector("#semanaAtual").textContent =
+    `Week: ${dias[0].toLocaleDateString("en-US")} - ${dias[4].toLocaleDateString("en-US")}`;
 }
 
 // ===============================
-//  MODAL DE RESERVA (CORRIGIDO)
+//  MODAL DE RESERVA
 // ===============================
 function abrirModal(dia, hora) {
   const dlg = document.querySelector("#reservaModal");
-  document.querySelector("#infoDia").textContent = `Day ${dia.toLocaleDateString(
-    "en-US"
-  )} at ${hora}`;
+  document.querySelector("#infoDia").textContent =
+    `Day ${dia.toLocaleDateString("en-US")} at ${hora}`;
   dlg.showModal();
 
-  // Substitui listeners antigos
-  const oldConfirm = document.querySelector("#confirmar");
-  const oldCancel = document.querySelector("#cancelar");
-  const newConfirm = oldConfirm.cloneNode(true);
-  const newCancel = oldCancel.cloneNode(true);
-  oldConfirm.parentNode.replaceChild(newConfirm, oldConfirm);
-  oldCancel.parentNode.replaceChild(newCancel, oldCancel);
+  document.querySelector("#confirmar").onclick = async () => {
+    const nome = document.querySelector("#nome").value.trim();
+    const email = document.querySelector("#email").value.trim();
+    const duracao = parseFloat(document.querySelector("#duracao").value);
+    const repetir = document.querySelector("#repetir").checked;
 
-  // Botão Confirmar
-  newConfirm.onclick = async () => {
-    try {
-      const nome = document.querySelector("#nome").value.trim();
-      const email = document.querySelector("#email").value.trim();
-      const duracao = parseFloat(document.querySelector("#duracao").value);
-      const repetir = document.querySelector("#repetir").checked;
-
-      console.log("🟢 Clique Confirmar:", { nome, email, duracao, repetir });
-
-      if (!nome || !email) {
-        alert("Please fill in name and e-mail.");
-        return;
-      }
-
-      await reservarHorario(dia, hora, nome, email, duracao, repetir);
-      console.log("✅ Reserva criada com sucesso!");
-      dlg.close();
-    } catch (err) {
-      console.error("❌ Erro no botão Confirmar:", err);
-      alert("Erro ao confirmar reserva. Veja o console para detalhes.");
-    }
-  };
-
-  // Botão Cancelar
-  newCancel.onclick = () => {
-    console.log("❌ Modal fechado sem ação");
-    dlg.close();
-  };
-}
-
-// ===============================
-//  CRIAÇÃO DE RESERVAS (PROTEGIDA)
-// ===============================
-async function reservarHorario(dia, hora, nome, email, duracaoHoras, repetir) {
-  try {
-    console.log("⚙️ Iniciando reservarHorario()", { dia, hora, nome, email, duracaoHoras, repetir });
-
-    const [hh, mm] = hora.split(":").map(Number);
-    const base = new Date(dia);
-    base.setHours(hh, mm, 0, 0);
-
-    const agora = new Date();
-    if (base < agora) {
-      alert("You cannot book a past time.");
+    if (!nome || !email) {
+      alert("Please fill in name and e-mail.");
       return;
     }
 
-    const idRepeticao = crypto.randomUUID();
-    const limite = new Date("2030-12-31");
-    const novas = criarReservasParaBloco(base, nome, email, duracaoHoras, idRepeticao);
+    await reservarHorario(dia, hora, nome, email, duracao, repetir);
+    dlg.close();
+  };
 
-    if (repetir) {
-      let p = new Date(base);
-      while (true) {
-        p.setDate(p.getDate() + 7);
-        if (p > limite) break;
-        novas.push(...criarReservasParaBloco(p, nome, email, duracaoHoras, idRepeticao));
-      }
-    }
-
-    console.log("📤 Enviando reservas:", novas);
-    await salvarReservasServidor(novas);
-    await gerarCalendario();
-  } catch (err) {
-    console.error("❌ Erro em reservarHorario():", err);
-    alert("Falha ao criar reserva. Veja o console.");
-  }
+  document.querySelector("#cancelar").onclick = () => dlg.close();
 }
 
-function criarReservasParaBloco(inicio, nome, email, duracaoHoras, idRepeticao) {
+// ===============================
+//  CRIAÇÃO DE RESERVAS
+// ===============================
+async function reservarHorario(dia, hora, nome, email, duracaoHoras, repetir) {
+  const [hh, mm] = hora.split(":").map(Number);
+  const base = new Date(dia);
+  base.setHours(hh, mm, 0, 0);
+
+  if (base < new Date()) {
+    alert("You cannot book a past time.");
+    return;
+  }
+
+  const salaSelecionada = document.querySelector("#salaSelect").value;
+  const idRepeticao = crypto.randomUUID();
+  const limite = new Date("2030-12-31");
+
+  const novas = criarReservasParaBloco(base, nome, email, duracaoHoras, idRepeticao, salaSelecionada);
+
+  if (repetir) {
+    let p = new Date(base);
+    while (true) {
+      p.setDate(p.getDate() + 7);
+      if (p > limite) break;
+      novas.push(...criarReservasParaBloco(p, nome, email, duracaoHoras, idRepeticao, salaSelecionada));
+    }
+  }
+
+  await salvarReservasServidor(novas);
+  await gerarCalendario();
+}
+
+function criarReservasParaBloco(inicio, nome, email, duracaoHoras, idRepeticao, sala) {
   const criadas = [];
   const slots = Math.floor((duracaoHoras * 60) / 30);
+
   for (let i = 0; i < slots; i++) {
     const d = new Date(inicio);
     d.setMinutes(d.getMinutes() + i * 30);
+
     criadas.push({
       data: localISO(d),
       nome,
       email,
       duracao: duracaoHoras,
       idRepeticao,
+      sala
     });
   }
   return criadas;
@@ -274,36 +250,24 @@ document.querySelector("#semanaAnterior").onclick = async () => {
   currentDate.setDate(currentDate.getDate() - 7);
   await gerarCalendario();
 };
+
 document.querySelector("#semanaProxima").onclick = async () => {
   currentDate.setDate(currentDate.getDate() + 7);
   await gerarCalendario();
 };
+
 document.querySelector("#semanaAtualBtn").onclick = async () => {
   currentDate = new Date();
   await gerarCalendario();
 };
 
 // ===============================
-//  FILTRO MENSAL
+//  TROCA DE SALA → AUTO REFRESH
 // ===============================
-document.querySelectorAll("#mesBar button").forEach((btn) => {
-  btn.addEventListener("click", async () => {
-    const mes = parseInt(btn.getAttribute("data-mes"));
-    const anoAtual = currentDate.getFullYear();
-    currentDate = new Date(anoAtual, mes, 1);
-    await gerarCalendario();
-    document.querySelectorAll("#mesBar button").forEach((b) => b.classList.remove("active"));
-    btn.classList.add("active");
-  });
-});
+document.querySelector("#salaSelect").addEventListener("change", gerarCalendario);
 
 // ===============================
-//  STARTUP / INICIALIZAÇÃO
+//  STARTUP
 // ===============================
 window.addEventListener("load", gerarCalendario);
 console.log("✅ script.js successfully loaded");
-
-document.addEventListener("DOMContentLoaded", async () => {
-  console.log("🚀 Inicializando calendário...");
-  await gerarCalendario();
-});

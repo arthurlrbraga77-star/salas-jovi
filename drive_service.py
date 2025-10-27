@@ -6,6 +6,7 @@ import os
 import io
 import pickle
 import base64
+import json
 
 # ============================
 # CONFIGURAÇÃO
@@ -46,9 +47,11 @@ def get_service():
 # ============================
 # UPLOAD DO ARQUIVO
 # ============================
-def upload_file(local_path, file_name, folder_id):
+def upload_file(local_path, folder_id):
     """Faz upload do arquivo JSON para a pasta correta no Drive."""
     service = get_service()
+    file_name = os.path.basename(local_path)
+
     file_metadata = {"name": file_name, "parents": [folder_id]}
     media = MediaFileUpload(local_path, mimetype="application/json", resumable=True)
 
@@ -63,7 +66,7 @@ def upload_file(local_path, file_name, folder_id):
     if files:
         file_id = files[0]["id"]
         service.files().update(fileId=file_id, media_body=media).execute()
-        print(f"✅ Arquivo atualizado no Drive: {file_name}")
+        print(f"🔁 Arquivo atualizado no Drive: {file_name}")
     else:
         service.files().create(body=file_metadata, media_body=media, fields="id").execute()
         print(f"✅ Arquivo criado no Drive: {file_name}")
@@ -89,9 +92,11 @@ def download_file(file_id, local_path):
 # ============================
 # GARANTE QUE O ARQUIVO EXISTA
 # ============================
-def ensure_file_exists(file_name, folder_id, local_path):
+def ensure_file_exists(folder_id, local_path):
     """Verifica se o arquivo existe no Drive; se não, cria um novo."""
     service = get_service()
+    file_name = os.path.basename(local_path)
+
     results = service.files().list(
         q=f"name='{file_name}' and '{folder_id}' in parents and trashed=false",
         spaces="drive",
@@ -105,7 +110,8 @@ def ensure_file_exists(file_name, folder_id, local_path):
         download_file(file_id, local_path)
     else:
         print("⚠️ Arquivo não encontrado no Drive. Criando um novo...")
+        os.makedirs(os.path.dirname(local_path), exist_ok=True)
         with open(local_path, "w", encoding="utf-8") as f:
-            f.write('{"reservas": []}')
-        upload_file(local_path, file_name, folder_id)
+            json.dump({"reservas": []}, f, ensure_ascii=False, indent=2)
+        upload_file(local_path, folder_id)
         print(f"✅ Novo arquivo {file_name} criado e enviado ao Drive.")
