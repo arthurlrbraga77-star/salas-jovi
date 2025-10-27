@@ -25,9 +25,7 @@ h1 {
   text-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
 }
 
-label {
-  font-weight: 600;
-}
+label { font-weight: 600; }
 
 select {
   border: 1px solid #ccc;
@@ -98,35 +96,76 @@ select {
   color: #000;
 }
 
-/* ======== CALENDÁRIO ======== */
+/* ======== TEXTO DE SEMANA ======== */
+#semanaAtual {
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+/* ===================================================================
+   CALENDÁRIO — OPÇÃO A (responsivo com scroll horizontal suave)
+   Estrutura HTML:
+   <div class="calendar-scroll">
+     <div class="calendar-grid">
+       <div class="grid header"></div>
+       <div class="grid body"></div>
+     </div>
+   </div>
+   ===================================================================*/
+
+/* Moldura externa (borda/raio) */
 .calendar {
   margin-top: 20px;
   border: 1px solid #e0e0e0;
   border-radius: 10px;
-  overflow: hidden;
 }
 
+/* Wrapper com scroll horizontal no mobile */
+.calendar-scroll{
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
+  border-radius: 10px; /* respeita o raio ao fazer scroll */
+}
+
+/* Define uma largura mínima para não “quebrar” no celular */
+.calendar-grid{
+  min-width: 720px; /* 90px (horas) + 5 colunas bem confortáveis */
+  background: #fff;
+}
+
+/* Grids base */
+.grid { display: grid; grid-template-columns: 90px repeat(5, 1fr); }
+
+/* Cabeçalho (dia/semana) */
 .grid.header {
-  display: grid;
-  grid-template-columns: 90px repeat(5, 1fr);
   background-color: #1E46E6;
   color: #fff;
   font-weight: 700;
   text-align: center;
   height: 45px;
   align-items: center;
+  position: sticky;  /* fica colado ao topo ao rolar a página */
+  top: 0;
+  z-index: 3;
 }
 
-.grid.body {
-  display: flex;
-  flex-direction: column;
+/* Força quebra em duas linhas no cabeçalho */
+.grid.header .dow { display:block; line-height:1.05; }
+.grid.header .date{ display:block; font-weight:600; opacity:.9; line-height:1.05; }
+
+/* Deixa a primeira célula do header (coluna de “Time”) fixa à esquerda */
+.grid.header > div:first-child{
+  position: sticky;
+  left: 0;
+  z-index: 4;
+  background: #1E46E6; /* mesma cor do header */
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: 90px repeat(5, 1fr);
-}
+/* Corpo (linhas por horário) */
+.grid.body { display: flex; flex-direction: column; }
 
+/* Células */
 .time-cell,
 .slot-cell {
   border: 1px solid #e6e6e6;
@@ -135,29 +174,27 @@ select {
   padding: 8px;
 }
 
-.time-cell {
+/* Coluna de horas fixa à esquerda para facilitar leitura */
+.time-cell{
   background-color: #fafafa;
   font-weight: 600;
   color: #333;
+  position: sticky;
+  left: 0;
+  z-index: 2;
 }
 
-.slot-cell.free:hover {
-  background-color: #eaf0ff;
-  cursor: pointer;
-}
-
-.slot-cell.busy {
+/* Slots */
+.slot-cell.free:hover { background-color: #eaf0ff; cursor: pointer; }
+.slot-cell.busy{
   background-color: #ff7b7b;
   color: #fff;
   font-weight: 600;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+  text-shadow: 0 1px 1px rgba(0,0,0,0.2);
 }
 
-/* ======== TEXTO DE SEMANA ======== */
-#semanaAtual {
-  font-weight: 600;
-  margin-bottom: 10px;
-}
+/* Altura mínima “clicável” para os slots (mobile-friendly) */
+.slot-cell{ min-height: 44px; }
 
 /* ======== MODAL ======== */
 dialog {
@@ -190,16 +227,16 @@ button.primary {
   font-weight: 600;
 }
 
-button.primary:hover {
-  background: #0d2dbb;
-}
+button.primary:hover { background: #0d2dbb; }
 
 /* ======== SCROLLBAR ======== */
-::-webkit-scrollbar {
-  height: 8px;
-}
-::-webkit-scrollbar-thumb {
-  background: #1E46E6;
-  border-radius: 10px;
-}
+::-webkit-scrollbar { height: 8px; }
+::-webkit-scrollbar-thumb { background: #1E46E6; border-radius: 10px; }
 
+/* ======== AJUSTES MOBILE ======== */
+@media (max-width: 480px){
+  main{ padding: 24px; margin: 20px auto; }
+  .grid.header{ height: 48px; }
+  .time-cell, .slot-cell{ padding: 8px 6px; }
+  .grid.header .date{ font-size: .85rem; }
+}

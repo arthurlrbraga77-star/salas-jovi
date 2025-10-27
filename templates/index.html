@@ -46,10 +46,15 @@
 
     <p id="semanaAtual"></p>
 
-    <div class="calendar">
-      <div class="grid header"></div>
-      <div class="grid body"></div>
+    <!-- ===== CALENDÁRIO: WRAPPER PARA SCROLL SUAVE NO MOBILE ===== -->
+    <div class="calendar-scroll">
+      <!-- A grid/table ganha uma largura mínima para não quebrar no mobile -->
+      <div class="calendar-grid">
+        <div class="grid header" aria-label="Calendar header"></div>
+        <div class="grid body" aria-label="Calendar body"></div>
+      </div>
     </div>
+    <!-- ===== FIM CALENDÁRIO ===== -->
   </main>
 
   <!-- Reservation Modal -->
