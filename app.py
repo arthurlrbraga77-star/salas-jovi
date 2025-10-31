@@ -30,7 +30,8 @@ def load_data():
     garantir_arquivo_local()
 
     try:
-        ensure_file_exists("reservas.json", GOOGLE_FOLDER_ID, LOCAL_TEMP_FILE)
+        # ✅ Corrigido: agora baixa corretamente o JSON do Drive ao iniciar
+        ensure_file_exists(LOCAL_TEMP_FILE, GOOGLE_FOLDER_ID, default_content={"reservas": []})
         print("☁️ Arquivo verificado/baixado do Drive.")
     except Exception as e:
         print(f"⚠️ Falha ao sincronizar com o Drive: {e}")
@@ -53,15 +54,15 @@ def save_data(data):
     if "reservas" not in data:
         data["reservas"] = []
 
-    # Salva localmente
+    # 💾 Salva localmente
     with open(LOCAL_TEMP_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
     print(f"💾 {len(data['reservas'])} reservas salvas localmente.")
 
-    # Tenta enviar para o Drive
+    # ☁️ Envia para o Drive
     try:
-        upload_file(LOCAL_TEMP_FILE, "reservas.json", GOOGLE_FOLDER_ID)
+        upload_file(LOCAL_TEMP_FILE, GOOGLE_FOLDER_ID)
         print("✅ Arquivo sincronizado com o Google Drive.")
     except Exception as e:
         print(f"⚠️ Falha ao sincronizar com o Drive: {e}")
@@ -86,7 +87,7 @@ def get_reservas():
 
 @app.route("/api/reservas", methods=["POST"])
 def add_reserva():
-    """Adiciona novas reservas."""
+    """Adiciona novas reservas e sincroniza imediatamente com o Drive."""
     payload = request.get_json(silent=True)
     if not payload:
         return jsonify({"error": "Invalid JSON"}), 400
@@ -98,8 +99,9 @@ def add_reserva():
     else:
         data["reservas"].append(payload)
 
+    # ✅ Salva local e envia pro Drive (todas as reservas sobem)
     save_data(data)
-    print("📥 Nova reserva adicionada com sucesso.")
+    print("📥 Nova reserva adicionada e sincronizada com sucesso.")
     return jsonify({"status": "ok"}), 201
 
 

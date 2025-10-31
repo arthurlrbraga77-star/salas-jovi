@@ -15,12 +15,15 @@ SCOPES = ["https://www.googleapis.com/auth/drive.file"]
 FOLDER_ID = os.getenv("GOOGLE_FOLDER_ID")  # ID da pasta do Drive
 
 
+# ============================
+# AUTENTICAÇÃO
+# ============================
 def get_service():
     """Autentica com o Google Drive usando o token salvo localmente ou via Render."""
     creds = None
 
-    # 1️⃣ Tenta pegar o token do Render (variável de ambiente codificada em Base64)
-    token_env = os.getenv("GOOGLE_TOKEN_PICKLE")
+    # 1️⃣ Token do Render (Base64)
+    token_env = os.getenv("GOOGLE_TOKEN_PICKLE_BASE64") or os.getenv("GOOGLE_TOKEN_PICKLE")
     if token_env:
         try:
             creds = pickle.loads(base64.b64decode(token_env.encode()))
@@ -28,34 +31,35 @@ def get_service():
         except Exception as e:
             print(f"⚠️ Erro ao decodificar token do ambiente: {e}")
 
-    # 2️⃣ Caso não tenha token no ambiente, tenta o arquivo local
+    # 2️⃣ Token local
     if not creds and os.path.exists("token_drive.pkl"):
         with open("token_drive.pkl", "rb") as token:
             creds = pickle.load(token)
         print("💾 Token carregado do arquivo local.")
 
-    # 3️⃣ Se o token expirou, renova automaticamente
+    # 3️⃣ Renova token se expirado
     if creds and creds.expired and creds.refresh_token:
         creds.refresh(google.auth.transport.requests.Request())
         print("🔁 Token do Google renovado.")
 
-    # 4️⃣ Retorna o serviço autenticado
-    service = build("drive", "v3", credentials=creds)
-    return service
+    if not creds:
+        raise Exception("❌ Nenhum token válido encontrado. Verifique GOOGLE_TOKEN_PICKLE_BASE64.")
+
+    # 4️⃣ Retorna serviço
+    return build("drive", "v3", credentials=creds)
 
 
 # ============================
 # UPLOAD DO ARQUIVO
 # ============================
-def upload_file(local_path, folder_id):
-    """Faz upload do arquivo JSON para a pasta correta no Drive."""
+def upload_file(local_path, folder_id=FOLDER_ID):
+    """Faz upload do arquivo JSON para o Drive."""
     service = get_service()
     file_name = os.path.basename(local_path)
 
     file_metadata = {"name": file_name, "parents": [folder_id]}
     media = MediaFileUpload(local_path, mimetype="application/json", resumable=True)
 
-    # Verifica se já existe um arquivo com o mesmo nome na pasta
     results = service.files().list(
         q=f"name='{file_name}' and '{folder_id}' in parents and trashed=false",
         spaces="drive",
@@ -79,6 +83,7 @@ def download_file(file_id, local_path):
     """Baixa o arquivo JSON do Drive para o servidor local."""
     service = get_service()
     request = service.files().get_media(fileId=file_id)
+    os.makedirs(os.path.dirname(local_path), exist_ok=True)
     with io.FileIO(local_path, "wb") as fh:
         downloader = MediaIoBaseDownload(fh, request)
         done = False
@@ -92,26 +97,40 @@ def download_file(file_id, local_path):
 # ============================
 # GARANTE QUE O ARQUIVO EXISTA
 # ============================
-def ensure_file_exists(folder_id, local_path):
-    """Verifica se o arquivo existe no Drive; se não, cria um novo."""
-    service = get_service()
-    file_name = os.path.basename(local_path)
+def ensure_file_exists(local_path, folder_id=FOLDER_ID, default_content=None):
+    """
+    Garante que o arquivo JSON existe tanto localmente quanto no Drive.
+    Corrigido: aceita 3 parâmetros (erro do log resolvido).
+    """
+    try:
+        service = get_service()
+        file_name = os.path.basename(local_path)
 
-    results = service.files().list(
-        q=f"name='{file_name}' and '{folder_id}' in parents and trashed=false",
-        spaces="drive",
-        fields="files(id, name)"
-    ).execute()
+        # 1️⃣ Procura o arquivo no Drive
+        results = service.files().list(
+            q=f"name='{file_name}' and '{folder_id}' in parents and trashed=false",
+            spaces="drive",
+            fields="files(id, name)"
+        ).execute()
 
-    files = results.get("files", [])
-    if files:
-        print(f"📂 Arquivo {file_name} já existe no Drive.")
-        file_id = files[0]["id"]
-        download_file(file_id, local_path)
-    else:
-        print("⚠️ Arquivo não encontrado no Drive. Criando um novo...")
-        os.makedirs(os.path.dirname(local_path), exist_ok=True)
-        with open(local_path, "w", encoding="utf-8") as f:
-            json.dump({"reservas": []}, f, ensure_ascii=False, indent=2)
-        upload_file(local_path, folder_id)
-        print(f"✅ Novo arquivo {file_name} criado e enviado ao Drive.")
+        files = results.get("files", [])
+        if files:
+            print(f"📂 Arquivo {file_name} já existe no Drive.")
+            file_id = files[0]["id"]
+            download_file(file_id, local_path)
+
+            # Se o arquivo baixado estiver vazio, recria
+            if os.path.getsize(local_path) == 0:
+                print("⚠️ Arquivo vazio. Recriando com conteúdo padrão.")
+                with open(local_path, "w", encoding="utf-8") as f:
+                    json.dump(default_content or [], f, ensure_ascii=False, indent=2)
+                upload_file(local_path, folder_id)
+        else:
+            print("⚠️ Arquivo não encontrado no Drive. Criando um novo...")
+            os.makedirs(os.path.dirname(local_path), exist_ok=True)
+            with open(local_path, "w", encoding="utf-8") as f:
+                json.dump(default_content or [], f, ensure_ascii=False, indent=2)
+            upload_file(local_path, folder_id)
+            print(f"✅ Novo arquivo {file_name} criado e enviado ao Drive.")
+    except Exception as e:
+        print(f"❌ Erro em ensure_file_exists: {e}")
