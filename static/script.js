@@ -38,12 +38,12 @@ function inicioDaSemana(date) {
 async function carregarReservas() {
   try {
     const res = await fetch("/api/reservas");
-    if (!res.ok) throw new Error("Falha ao carregar reservas");
+    if (!res.ok) throw new Error("Failed loading reservations");
+
     const data = await res.json();
     reservas = data.reservas || [];
-    console.log(`📥 Reservas carregadas: ${reservas.length}`);
   } catch (err) {
-    console.error("❌ Erro ao carregar reservas:", err);
+    console.error("❌ Error loading reservations:", err);
     reservas = [];
   }
 }
@@ -53,19 +53,15 @@ async function salvarReservasServidor(novas) {
     const res = await fetch("/api/reservas", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(novas)
+      body: JSON.stringify(novas),
     });
 
     if (!res.ok) {
       const txt = await res.text();
-      console.error("❌ Erro ao salvar reserva:", txt);
-      alert("Erro ao salvar reserva no servidor.");
-    } else {
-      console.log("✅ Reserva(s) enviada(s) ao servidor.");
+      alert("Error saving reservation:\n" + txt);
     }
   } catch (err) {
-    console.error("🚨 Erro grave ao salvar reservas:", err);
-    alert("Falha ao comunicar com o servidor.");
+    alert("Server communication error.");
   }
 }
 
@@ -76,8 +72,7 @@ async function gerarCalendario() {
   await carregarReservas();
   const salaSelecionada = document.querySelector("#salaSelect").value;
 
-  // Opção A: ignorar reservas sem sala
-  const reservasSala = reservas.filter(r => r.sala && r.sala === salaSelecionada);
+  const reservasSala = reservas.filter(r => r.sala === salaSelecionada);
 
   const inicioSemana = inicioDaSemana(currentDate);
   const dias = Array.from({ length: 5 }, (_, i) => {
@@ -89,27 +84,15 @@ async function gerarCalendario() {
   const header = document.querySelector(".grid.header");
   const body = document.querySelector(".grid.body");
 
-  if (!header || !body) {
-    console.warn("⚠️ Elementos do calendário não encontrados no HTML.");
-    return;
-  }
-
-  // Cabeçalho da semana
+  // Cabeçalho
   header.innerHTML =
     `<div>Time</div>` +
-    dias
-      .map(
-        (d) =>
-          `<div>${d.toLocaleDateString("en-US", {
-            weekday: "short",
-            day: "2-digit",
-            month: "2-digit",
-          })}</div>`
-      )
-      .join("");
+    dias.map(d =>
+      `<div>${d.toLocaleDateString("en-US", { weekday: "short", month: "2-digit", day: "2-digit" })}</div>`
+    ).join("");
 
-  // Corpo da tabela
   body.innerHTML = "";
+
   horas.forEach((hora) => {
     const linha = document.createElement("div");
     linha.classList.add("grid");
@@ -125,12 +108,15 @@ async function gerarCalendario() {
 
       if (reserva) {
         slot.classList.add("busy");
-        slot.textContent = reserva.nome || "Booked";
-        slot.title = `${reserva.nome || "Meeting"} — ${reserva.email || ""}`;
+        slot.textContent = reserva.nome;
+        slot.title = `${reserva.nome} — ${reserva.email}`;
 
+        // ===============================
+        // CANCELAMENTO INSTANTÂNEO
+        // ===============================
         slot.addEventListener("click", async () => {
-          const senha = prompt(`To cancel "${reserva.nome}", please enter the admin password:`);
-          if (senha === null) return;
+          const senha = prompt(`To cancel "${reserva.nome}", enter admin password:`);
+          if (!senha) return;
 
           const res = await fetch("/api/reservas/delete", {
             method: "POST",
@@ -143,12 +129,21 @@ async function gerarCalendario() {
 
           const result = await res.json();
           if (res.status === 200) {
-            alert("✅ Reservation successfully canceled.");
-            await gerarCalendario();
+            alert("✅ Reservation canceled.");
+
+            // 🔥 remove visual IMEDIATAMENTE
+            slot.classList.remove("busy");
+            slot.classList.add("free");
+            slot.textContent = "";
+            slot.onclick = () => abrirModal(dia, hora);
+
+            // recarrega dados silenciosamente
+            gerarCalendario(); // sem await
           } else {
-            alert(`❌ ${result.error || "Error while deleting reservation."}`);
+            alert("❌ " + (result.error || "Delete error"));
           }
         });
+
       } else {
         slot.classList.add("free");
         slot.addEventListener("click", () => abrirModal(dia, hora));
@@ -169,11 +164,19 @@ async function gerarCalendario() {
 // ===============================
 function abrirModal(dia, hora) {
   const dlg = document.querySelector("#reservaModal");
+
   document.querySelector("#infoDia").textContent =
     `Day ${dia.toLocaleDateString("en-US")} at ${hora}`;
+
   dlg.showModal();
 
   document.querySelector("#confirmar").onclick = async () => {
+    const btn = document.querySelector("#confirmar");
+    const oldText = btn.innerText;
+
+    btn.disabled = true;
+    btn.innerText = "Confirmando…";
+
     const nome = document.querySelector("#nome").value.trim();
     const email = document.querySelector("#email").value.trim();
     const duracao = parseFloat(document.querySelector("#duracao").value);
@@ -181,11 +184,19 @@ function abrirModal(dia, hora) {
 
     if (!nome || !email) {
       alert("Please fill in name and e-mail.");
+      btn.disabled = false;
+      btn.innerText = oldText;
       return;
     }
 
-    await reservarHorario(dia, hora, nome, email, duracao, repetir);
-    dlg.close();
+    try {
+      await reservarHorario(dia, hora, nome, email, duracao, repetir);
+    } finally {
+      btn.disabled = false;
+      btn.innerText = oldText;
+      dlg.close();
+      gerarCalendario();
+    }
   };
 
   document.querySelector("#cancelar").onclick = () => dlg.close();
@@ -208,19 +219,22 @@ async function reservarHorario(dia, hora, nome, email, duracaoHoras, repetir) {
   const idRepeticao = crypto.randomUUID();
   const limite = new Date("2030-12-31");
 
-  const novas = criarReservasParaBloco(base, nome, email, duracaoHoras, idRepeticao, salaSelecionada);
+  const novas = criarReservasParaBloco(
+    base, nome, email, duracaoHoras, idRepeticao, salaSelecionada
+  );
 
   if (repetir) {
     let p = new Date(base);
     while (true) {
       p.setDate(p.getDate() + 7);
       if (p > limite) break;
-      novas.push(...criarReservasParaBloco(p, nome, email, duracaoHoras, idRepeticao, salaSelecionada));
+      novas.push(
+        ...criarReservasParaBloco(p, nome, email, duracaoHoras, idRepeticao, salaSelecionada)
+      );
     }
   }
 
   await salvarReservasServidor(novas);
-  await gerarCalendario();
 }
 
 function criarReservasParaBloco(inicio, nome, email, duracaoHoras, idRepeticao, sala) {
@@ -237,7 +251,7 @@ function criarReservasParaBloco(inicio, nome, email, duracaoHoras, idRepeticao, 
       email,
       duracao: duracaoHoras,
       idRepeticao,
-      sala
+      sala,
     });
   }
   return criadas;
@@ -262,7 +276,7 @@ document.querySelector("#semanaAtualBtn").onclick = async () => {
 };
 
 // ===============================
-//  TROCA DE SALA → AUTO REFRESH
+//  TROCA DE SALA → REFRESH
 // ===============================
 document.querySelector("#salaSelect").addEventListener("change", gerarCalendario);
 
@@ -270,4 +284,3 @@ document.querySelector("#salaSelect").addEventListener("change", gerarCalendario
 //  STARTUP
 // ===============================
 window.addEventListener("load", gerarCalendario);
-console.log("✅ script.js successfully loaded");

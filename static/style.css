@@ -1,3 +1,55 @@
+/* ============================================================
+   🔵 JOVI STYLE — POWER BI UI — Arthur Braga Edition
+   ============================================================ */
+
+/* ======== BARRA DO DESENVOLVEDOR (HERO) ======== */
+.developer-hero {
+    width: 100%;
+    text-align: center;
+    padding: 10px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: white;
+    background: linear-gradient(90deg, #0E04C2, #1E46E6);
+    letter-spacing: 0.4px;
+    margin-bottom: 25px;
+    border-bottom: 3px solid #0A037A;
+    box-shadow: 0px 3px 10px rgba(0,0,0,0.20);
+}
+
+.developer-hero strong {
+    font-weight: 700;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.25);
+}
+
+/* ======== TÍTULO COM LOGO — ESTILO POWER BI ======== */
+.page-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 5px 0 18px;
+    margin-bottom: 22px;
+}
+
+.page-title.full-bleed {
+    margin: 0;
+    padding: 18px 0 20px;
+}
+
+.page-title h1 {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 800;
+    color: #1E46E6;
+}
+
+.jovi-logo {
+    height: 58px;
+    width: auto;
+    object-fit: contain;
+}
+
 /* ======== LAYOUT BASE ======== */
 body {
   font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
@@ -16,21 +68,34 @@ main {
   padding: 30px 40px;
 }
 
-/* ======== CABEÇALHO ======== */
-h1 {
-  color: #1E46E6;
-  font-weight: 800;
-  font-size: 1.9rem;
-  margin-top: 0;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
-}
-
 label { font-weight: 600; }
 
-select {
+/* ===== CAIXAS DE TEXTO E EMAIL ===== */
+input[type="text"],
+input[type="email"] {
   border: 1px solid #ccc;
   border-radius: 6px;
-  padding: 5px 10px;
+  padding: 7px 10px;
+  font-size: 0.95rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* ===== DROPDOWN ESPECÍFICO DO SELECT DE SALA ===== */
+#salaSelect {
+  width: 260px;   /* <-- ajuste do tamanho da caixa */
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 0.95rem;
+}
+
+/* ===== DROPDOWNS DO MODAL (NORMAL) ===== */
+dialog select {
+  width: 100%;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 7px 10px;
   font-size: 0.95rem;
 }
 
@@ -58,86 +123,39 @@ select {
   transform: translateY(-1px);
 }
 
-/* ======== DICA ======== */
 .tip {
   font-size: 0.9rem;
   color: #444;
   margin: 10px 0 20px;
 }
 
-/* ======== BARRA DE MESES ======== */
-.meses-bar {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-  margin: 15px 0 25px;
-}
-
-.meses-bar button {
-  background: linear-gradient(90deg, #1E46E6, #000);
-  color: white;
-  border: none;
-  border-radius: 10px;
-  padding: 8px 14px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.meses-bar button:hover {
-  transform: translateY(-2px);
-  background: linear-gradient(90deg, #2c52ff, #111);
-}
-
-.meses-bar button.active {
-  background: #FFD500;
-  color: #000;
-}
-
-/* ======== TEXTO DE SEMANA ======== */
+/* ======== SEMANA TEXTO ======== */
 #semanaAtual {
   font-weight: 600;
   margin-bottom: 10px;
 }
 
 /* ===================================================================
-   CALENDÁRIO — OPÇÃO A (responsivo com scroll horizontal suave)
-   Estrutura HTML:
-   <div class="calendar-scroll">
-     <div class="calendar-grid">
-       <div class="grid header"></div>
-       <div class="grid body"></div>
-     </div>
-   </div>
+   📅 CALENDÁRIO
    ===================================================================*/
 
-/* Moldura externa (borda/raio) */
-.calendar {
-  margin-top: 20px;
-  border: 1px solid #e0e0e0;
+.calendar-scroll {
+  overflow-x: auto;
+  scrollbar-gutter: stable;
   border-radius: 10px;
 }
 
-/* Wrapper com scroll horizontal no mobile */
-.calendar-scroll{
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-gutter: stable;
-  border-radius: 10px; /* respeita o raio ao fazer scroll */
-}
-
-/* Define uma largura mínima para não “quebrar” no celular */
-.calendar-grid{
-  min-width: 720px; /* 90px (horas) + 5 colunas bem confortáveis */
+.calendar-grid {
+  min-width: 720px;
   background: #fff;
 }
 
-/* Grids base */
-.grid { display: grid; grid-template-columns: 90px repeat(5, 1fr); }
+.grid { 
+  display: grid;
+  grid-template-columns: 90px repeat(5, 1fr); 
+}
 
-/* Cabeçalho (dia/semana) */
+/* Cabeçalho */
 .grid.header {
   background-color: #1E46E6;
   color: #fff;
@@ -145,27 +163,24 @@ select {
   text-align: center;
   height: 45px;
   align-items: center;
-  position: sticky;  /* fica colado ao topo ao rolar a página */
+  position: sticky;
   top: 0;
   z-index: 3;
 }
 
-/* Força quebra em duas linhas no cabeçalho */
-.grid.header .dow { display:block; line-height:1.05; }
-.grid.header .date{ display:block; font-weight:600; opacity:.9; line-height:1.05; }
-
-/* Deixa a primeira célula do header (coluna de “Time”) fixa à esquerda */
-.grid.header > div:first-child{
+.grid.header > div:first-child {
   position: sticky;
   left: 0;
+  background: #1E46E6;
   z-index: 4;
-  background: #1E46E6; /* mesma cor do header */
 }
 
-/* Corpo (linhas por horário) */
-.grid.body { display: flex; flex-direction: column; }
+/* Corpo */
+.grid.body {
+  display: flex;
+  flex-direction: column;
+}
 
-/* Células */
 .time-cell,
 .slot-cell {
   border: 1px solid #e6e6e6;
@@ -174,8 +189,7 @@ select {
   padding: 8px;
 }
 
-/* Coluna de horas fixa à esquerda para facilitar leitura */
-.time-cell{
+.time-cell {
   background-color: #fafafa;
   font-weight: 600;
   color: #333;
@@ -184,59 +198,140 @@ select {
   z-index: 2;
 }
 
-/* Slots */
-.slot-cell.free:hover { background-color: #eaf0ff; cursor: pointer; }
-.slot-cell.busy{
+.slot-cell.free:hover {
+  background-color: #eaf0ff;
+  cursor: pointer;
+}
+
+.slot-cell.busy {
   background-color: #ff7b7b;
   color: #fff;
   font-weight: 600;
   text-shadow: 0 1px 1px rgba(0,0,0,0.2);
 }
 
-/* Altura mínima “clicável” para os slots (mobile-friendly) */
-.slot-cell{ min-height: 44px; }
+.slot-cell { min-height: 44px; }
 
-/* ======== MODAL ======== */
+/* ============================================================
+   🟦 MODAL — DESIGN ORIGINAL BONITO
+   ============================================================ */
+
 dialog {
   border: none;
   border-radius: 14px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
   padding: 25px;
   background: #fff;
-  max-width: 400px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.20);
 }
 
 dialog::backdrop {
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0,0,0,0.45);
   backdrop-filter: blur(2px);
 }
 
+dialog h2 {
+  margin: 0 0 8px;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+#infoDia {
+  margin: 0 0 15px;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.form-field {
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-row {
+  display: flex;
+  gap: 15px;
+  margin-top: 10px;
+}
+
+.repeat-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ===== BOTÕES ===== */
 menu {
   display: flex;
   justify-content: space-between;
-  margin-top: 15px;
+  margin-top: 18px;
+  padding: 0;
+}
+
+menu button {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+}
+
+#cancelar {
+  background: #e4e4e4;
 }
 
 button.primary {
   background: #1E46E6;
   color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
 }
 
-button.primary:hover { background: #0d2dbb; }
+button.primary:hover {
+  background: #0d2dbb;
+}
 
 /* ======== SCROLLBAR ======== */
-::-webkit-scrollbar { height: 8px; }
-::-webkit-scrollbar-thumb { background: #1E46E6; border-radius: 10px; }
+::-webkit-scrollbar {
+    width: 6px;
+    height: 3px;
+}
 
-/* ======== AJUSTES MOBILE ======== */
+::-webkit-scrollbar-thumb {
+    background: #1E46E6; 
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #0d2dbb;
+}
+
+/* ============================================================
+   📱 MOBILE
+   ============================================================ */
 @media (max-width: 480px){
-  main{ padding: 24px; margin: 20px auto; }
-  .grid.header{ height: 48px; }
-  .time-cell, .slot-cell{ padding: 8px 6px; }
-  .grid.header .date{ font-size: .85rem; }
+
+  main {
+    padding: 22px;
+    margin: 20px auto;
+  }
+
+  .page-title {
+      flex-direction: column;
+      text-align: center;
+      gap: 8px;
+      padding-bottom: 12px;
+  }
+
+  .jovi-logo { height: 42px; }
+
+  dialog {
+    max-width: 92%;
+    padding: 20px;
+  }
+
+  .form-row {
+    flex-direction: column;
+    gap: 10px;
+  }
 }

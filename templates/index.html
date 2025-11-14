@@ -4,21 +4,37 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Meeting Room Booking - JOVI</title>
+
+  <!-- CSS -->
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 
 <body>
-  <main>
-    <h1>JOVI — Meeting Room Booking</h1>
 
+  <!-- ======= BARRA DO DESENVOLVEDOR ======= -->
+  <div class="developer-hero">
+    Developed by <strong>Arthur Braga</strong> — Branch Office São Paulo
+  </div>
+
+  <main>
+
+    <!-- ===== TÍTULO COM LOGO — ESTILO POWER BI ===== -->
+    <div class="page-title full-bleed">
+      <h1>Meeting Room Booking</h1>
+      <img src="{{ url_for('static', filename='jovi_logo.png') }}" alt="JOVI Logo" class="jovi-logo">
+    </div>
+
+    <!-- ===== SELETOR DE SALA ===== -->
     <div class="sala-select">
       <label for="salaSelect">Room:</label>
       <select id="salaSelect">
         <option value="samba" selected>Samba Room</option>
         <option value="bar">Bar Room</option>
+        <option value="caipirinha">Caipirinha Room</option>
       </select>
     </div>
 
+    <!-- ===== NAVEGAÇÃO DE SEMANA ===== -->
     <div class="week-nav">
       <button id="semanaAnterior">◀ Week</button>
       <button id="semanaAtualBtn">Today</button>
@@ -31,38 +47,50 @@
 
     <p id="semanaAtual"></p>
 
-    <!-- ===== CALENDÁRIO: WRAPPER PARA SCROLL SUAVE NO MOBILE ===== -->
+    <!-- ===== CALENDÁRIO ===== -->
     <div class="calendar-scroll">
-      <!-- A grid/table ganha uma largura mínima para não quebrar no mobile -->
       <div class="calendar-grid">
         <div class="grid header" aria-label="Calendar header"></div>
         <div class="grid body" aria-label="Calendar body"></div>
       </div>
     </div>
-    <!-- ===== FIM CALENDÁRIO ===== -->
+
   </main>
 
-  <!-- Reservation Modal -->
+  <!-- ===== MODAL ===== -->
   <dialog id="reservaModal">
     <h2>New Reservation</h2>
     <p id="infoDia"></p>
 
-    <label for="nome">Name/Title:</label>
-    <input type="text" id="nome" placeholder="e.g. Sales Meeting"><br />
+    <div class="form-field">
+      <label for="nome">Title:</label>
+      <input type="text" id="nome" placeholder="Sales Meeting">
+    </div>
 
-    <label for="email">E-mail:</label>
-    <input type="email" id="email" placeholder="example@jovimobile.com"><br />
+    <div class="form-field">
+      <label for="email">E-mail:</label>
+      <input type="email" id="email" placeholder="example@jovimobile.com">
+    </div>
 
-    <label for="duracao">Duration:</label>
-    <select id="duracao">
-      <option value="0.5">30 min</option>
-      <option value="1">1 hour</option>
-      <option value="2">2 hours</option>
-      <option value="3">3 hours</option>
-      <option value="4">4 hours</option>
-    </select><br />
+    <div class="form-row">
+      <div class="form-field">
+        <label for="duracao">Duration:</label>
+        <select id="duracao">
+          <option value="0.5">30 min</option>
+          <option value="1">1 hour</option>
+          <option value="2">2 hours</option>
+          <option value="3">3 hours</option>
+          <option value="4">4 hours</option>
+        </select>
+      </div>
 
-    <label><input type="checkbox" id="repetir"> Repeat weekly (∞)</label>
+      <div class="form-field repeat-field">
+        <label>
+          <input type="checkbox" id="repetir">
+          Repeat weekly (∞)
+        </label>
+      </div>
+    </div>
 
     <menu>
       <button id="cancelar">Cancel</button>
@@ -70,6 +98,7 @@
     </menu>
   </dialog>
 
+  <!-- JS -->
   <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
