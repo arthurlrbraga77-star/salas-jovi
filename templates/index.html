@@ -11,17 +11,23 @@
 
 <body>
 
-  <!-- ======= BARRA DO DESENVOLVEDOR ======= -->
+  <!-- ======= TOPO COM LOGO + DEV INFO ======= -->
   <div class="developer-hero">
-    Developed by <strong>Arthur Braga</strong> — Branch Office São Paulo
+    <img
+      src="{{ url_for('static', filename='jovi_logo.png') }}"
+      alt="JOVI Logo"
+      class="logo-top"
+    >
+    <span class="dev-text">
+      Developed by <strong>Arthur Braga</strong> — Branch Office São Paulo
+    </span>
   </div>
 
   <main>
 
-    <!-- ===== TÍTULO COM LOGO — ESTILO POWER BI ===== -->
+    <!-- ===== TÍTULO ===== -->
     <div class="page-title full-bleed">
       <h1>Meeting Room Booking</h1>
-      <img src="{{ url_for('static', filename='jovi_logo.png') }}" alt="JOVI Logo" class="jovi-logo">
     </div>
 
     <!-- ===== SELETOR DE SALA ===== -->
@@ -100,5 +106,6 @@
 
   <!-- JS -->
   <script src="{{ url_for('static', filename='script.js') }}"></script>
+
 </body>
 </html>
