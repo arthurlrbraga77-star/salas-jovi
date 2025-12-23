@@ -2,63 +2,70 @@
    🔵 JOVI STYLE — POWER BI UI — Arthur Braga Edition
    ============================================================ */
 
+/* 🔧 FIX GLOBAL (evita “zoom gigante” e layout quebrado no mobile) */
+* { box-sizing: border-box; }
+html, body { width: 100%; overflow-x: hidden; }
+
 /* ======== BARRA DO DESENVOLVEDOR (HERO) ======== */
 .developer-hero {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 10px 0 12px;
-    background: linear-gradient(90deg, #0E04C2, #1E46E6);
-    margin-bottom: 25px;
-    border-bottom: 3px solid #0A037A;
-    box-shadow: 0px 3px 10px rgba(0,0,0,0.20);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 12px 12px;
+  background: linear-gradient(90deg, #0E04C2, #1E46E6);
+  margin: 0 0 20px;
+  border-bottom: 3px solid #0A037A;
+  box-shadow: 0px 3px 10px rgba(0,0,0,0.20);
 }
 
 .logo-top {
-    height: 38px;
-    width: auto;
-    object-fit: contain;
-    margin-bottom: 4px;
+  height: 38px;
+  width: auto;
+  max-width: 180px;
+  object-fit: contain;
+  margin-bottom: 4px;
 }
 
 .dev-text {
-    font-size: 11px;
-    font-weight: 500;
-    color: #ffffff;
-    opacity: 0.85;
-    letter-spacing: 0.3px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #ffffff;
+  opacity: 0.88;
+  letter-spacing: 0.3px;
+  text-align: center;
+  line-height: 1.2;
 }
 
 .dev-text strong {
-    font-weight: 600;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.25);
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.25);
 }
 
 /* ======== TÍTULO — ESTILO POWER BI ======== */
 .page-title {
-    display: flex;
-    flex-direction: column;   /* 👈 ISSO resolve */
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-    padding: 8px 0 18px;
-    margin-bottom: 22px;
-    text-align: center;
-    gap: 6px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 10px 0 14px;
+  margin: 0 0 18px;
+  text-align: center;
+  gap: 6px;
 }
 
 .page-title.full-bleed {
-    margin: 0;
-    padding: 18px 0 20px;
+  margin: 0;
+  padding: 16px 0 14px;
 }
 
 .page-title h1 {
-    margin: 0;
-    font-size: 2rem;
-    font-weight: 800;
-    color: #1E46E6;
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 800;
+  color: #1E46E6;
 }
 
 /* ======== LAYOUT BASE ======== */
@@ -72,11 +79,12 @@ body {
 
 main {
   max-width: 1100px;
-  margin: 40px auto;
+  width: calc(100% - 24px);
+  margin: 16px auto 28px;
   background: #fff;
   border-radius: 14px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  padding: 30px 40px;
+  padding: 26px 34px;
 }
 
 label { font-weight: 600; }
@@ -89,12 +97,21 @@ input[type="email"] {
   padding: 7px 10px;
   font-size: 0.95rem;
   width: 100%;
-  box-sizing: border-box;
+}
+
+/* ===== SELETOR DE SALA (container) ===== */
+.sala-select {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 8px 0 10px;
 }
 
 /* ===== DROPDOWN ESPECÍFICO DO SELECT DE SALA ===== */
 #salaSelect {
   width: 260px;
+  max-width: 100%;
   border: 1px solid #ccc;
   border-radius: 6px;
   padding: 7px 10px;
@@ -114,7 +131,8 @@ dialog select {
 .week-nav {
   display: flex;
   gap: 10px;
-  margin: 15px 0 20px;
+  margin: 14px 0 18px;
+  flex-wrap: wrap;
 }
 
 .week-nav button {
@@ -137,23 +155,25 @@ dialog select {
 .tip {
   font-size: 0.9rem;
   color: #444;
-  margin: 10px 0 20px;
+  margin: 10px 0 16px;
 }
 
 /* ======== SEMANA TEXTO ======== */
 #semanaAtual {
   font-weight: 600;
-  margin-bottom: 10px;
+  margin: 0 0 10px;
 }
 
 /* ===================================================================
    📅 CALENDÁRIO
    ===================================================================*/
-
 .calendar-scroll {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   scrollbar-gutter: stable;
   border-radius: 10px;
+  border: 1px solid #eef0f6;
+  background: #fff;
 }
 
 .calendar-grid {
@@ -161,9 +181,10 @@ dialog select {
   background: #fff;
 }
 
-.grid { 
+/* header é grid (como você já usa) */
+.grid {
   display: grid;
-  grid-template-columns: 90px repeat(5, 1fr); 
+  grid-template-columns: 90px repeat(5, 1fr);
 }
 
 /* Cabeçalho */
@@ -186,18 +207,28 @@ dialog select {
   z-index: 4;
 }
 
-/* Corpo */
+/* Corpo: cada “linha” deve virar grid via JS (classe .row) */
 .grid.body {
-  display: flex;
-  flex-direction: column;
+  display: block; /* 🔧 evita bagunça com flex */
 }
 
+/* linha do corpo (adicione/garanta no JS: row.classList.add('row')) */
+.grid.body .row {
+  display: grid;
+  grid-template-columns: 90px repeat(5, 1fr);
+}
+
+/* Células */
 .time-cell,
 .slot-cell {
   border: 1px solid #e6e6e6;
   text-align: center;
   font-size: 0.9rem;
   padding: 8px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .time-cell {
@@ -221,12 +252,9 @@ dialog select {
   text-shadow: 0 1px 1px rgba(0,0,0,0.2);
 }
 
-.slot-cell { min-height: 44px; }
-
 /* ============================================================
    🟦 MODAL
    ============================================================ */
-
 dialog {
   border: none;
   border-radius: 14px;
@@ -289,55 +317,51 @@ menu button {
   border: none;
 }
 
-#cancelar {
-  background: #e4e4e4;
-}
+#cancelar { background: #e4e4e4; }
 
 button.primary {
   background: #1E46E6;
   color: white;
 }
 
-button.primary:hover {
-  background: #0d2dbb;
-}
+button.primary:hover { background: #0d2dbb; }
 
 /* ======== SCROLLBAR ======== */
 ::-webkit-scrollbar {
-    width: 6px;
-    height: 3px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #1E46E6; 
-    border-radius: 10px;
+  background: #1E46E6;
+  border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #0d2dbb;
+  background: #0d2dbb;
 }
 
 /* ============================================================
    📱 MOBILE
    ============================================================ */
-@media (max-width: 480px){
-
+@media (max-width: 480px) {
   main {
-    padding: 22px;
-    margin: 20px auto;
+    width: calc(100% - 18px);
+    padding: 18px;
+    margin: 12px auto 22px;
+    border-radius: 12px;
   }
 
-  .page-title h1 {
-    font-size: 1.6rem;
-  }
+  .page-title h1 { font-size: 1.55rem; }
 
   .logo-top {
-    height: 32px;
+    height: 30px;
+    max-width: 150px;
   }
 
-  .dev-text {
-    font-size: 10px;
-  }
+  .dev-text { font-size: 10px; }
+
+  #salaSelect { width: 100%; }
 
   dialog {
     max-width: 92%;
