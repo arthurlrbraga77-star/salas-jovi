@@ -2,7 +2,7 @@
    🔵 JOVI STYLE — POWER BI UI — Arthur Braga Edition
    ============================================================ */
 
-/* 🔧 FIX GLOBAL (evita “zoom gigante” e layout quebrado no mobile) */
+/* 🔧 FIX GLOBAL */
 * { box-sizing: border-box; }
 html, body { width: 100%; overflow-x: hidden; }
 
@@ -20,14 +20,6 @@ html, body { width: 100%; overflow-x: hidden; }
   box-shadow: 0px 3px 10px rgba(0,0,0,0.20);
 }
 
-.logo-top {
-  height: 38px;
-  width: auto;
-  max-width: 180px;
-  object-fit: contain;
-  margin-bottom: 4px;
-}
-
 .dev-text {
   font-size: 11px;
   font-weight: 500;
@@ -35,7 +27,6 @@ html, body { width: 100%; overflow-x: hidden; }
   opacity: 0.88;
   letter-spacing: 0.3px;
   text-align: center;
-  line-height: 1.2;
 }
 
 .dev-text strong {
@@ -51,7 +42,7 @@ html, body { width: 100%; overflow-x: hidden; }
   align-items: center;
   width: 100%;
   padding: 10px 0 14px;
-  margin: 0 0 18px;
+  margin-bottom: 18px;
   text-align: center;
   gap: 6px;
 }
@@ -66,6 +57,15 @@ html, body { width: 100%; overflow-x: hidden; }
   font-size: 2rem;
   font-weight: 800;
   color: #1E46E6;
+}
+
+/* ======== LOGO JOVI (FIX DEFINITIVO) ======== */
+.jovi-logo {
+  height: 52px;
+  max-width: 160px;
+  width: auto;
+  object-fit: contain;
+  display: block;
 }
 
 /* ======== LAYOUT BASE ======== */
@@ -89,17 +89,7 @@ main {
 
 label { font-weight: 600; }
 
-/* ===== CAIXAS DE TEXTO E EMAIL ===== */
-input[type="text"],
-input[type="email"] {
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  padding: 7px 10px;
-  font-size: 0.95rem;
-  width: 100%;
-}
-
-/* ===== SELETOR DE SALA (container) ===== */
+/* ===== SELETOR DE SALA ===== */
 .sala-select {
   display: flex;
   align-items: center;
@@ -108,19 +98,9 @@ input[type="email"] {
   margin: 8px 0 10px;
 }
 
-/* ===== DROPDOWN ESPECÍFICO DO SELECT DE SALA ===== */
 #salaSelect {
   width: 260px;
   max-width: 100%;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  padding: 7px 10px;
-  font-size: 0.95rem;
-}
-
-/* ===== DROPDOWNS DO MODAL ===== */
-dialog select {
-  width: 100%;
   border: 1px solid #ccc;
   border-radius: 6px;
   padding: 7px 10px;
@@ -144,33 +124,27 @@ dialog select {
   cursor: pointer;
   font-weight: 600;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: background 0.2s ease, transform 0.1s ease;
 }
 
 .week-nav button:hover {
   background-color: #0d2dbb;
-  transform: translateY(-1px);
 }
 
+/* ===== TEXTO ===== */
 .tip {
   font-size: 0.9rem;
   color: #444;
   margin: 10px 0 16px;
 }
 
-/* ======== SEMANA TEXTO ======== */
 #semanaAtual {
   font-weight: 600;
-  margin: 0 0 10px;
+  margin-bottom: 10px;
 }
 
-/* ===================================================================
-   📅 CALENDÁRIO
-   ===================================================================*/
+/* ===== CALENDÁRIO ===== */
 .calendar-scroll {
   overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-gutter: stable;
   border-radius: 10px;
   border: 1px solid #eef0f6;
   background: #fff;
@@ -178,66 +152,39 @@ dialog select {
 
 .calendar-grid {
   min-width: 720px;
-  background: #fff;
 }
 
-/* header é grid (como você já usa) */
 .grid {
   display: grid;
   grid-template-columns: 90px repeat(5, 1fr);
 }
 
-/* Cabeçalho */
 .grid.header {
   background-color: #1E46E6;
   color: #fff;
   font-weight: 700;
   text-align: center;
   height: 45px;
-  align-items: center;
-  position: sticky;
-  top: 0;
-  z-index: 3;
 }
 
-.grid.header > div:first-child {
-  position: sticky;
-  left: 0;
-  background: #1E46E6;
-  z-index: 4;
-}
-
-/* Corpo: cada “linha” deve virar grid via JS (classe .row) */
 .grid.body {
-  display: block; /* 🔧 evita bagunça com flex */
+  display: block;
 }
 
-/* linha do corpo (adicione/garanta no JS: row.classList.add('row')) */
 .grid.body .row {
   display: grid;
   grid-template-columns: 90px repeat(5, 1fr);
 }
 
-/* Células */
 .time-cell,
 .slot-cell {
   border: 1px solid #e6e6e6;
-  text-align: center;
   font-size: 0.9rem;
   padding: 8px;
   min-height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.time-cell {
-  background-color: #fafafa;
-  font-weight: 600;
-  color: #333;
-  position: sticky;
-  left: 0;
-  z-index: 2;
 }
 
 .slot-cell.free:hover {
@@ -249,17 +196,13 @@ dialog select {
   background-color: #ff7b7b;
   color: #fff;
   font-weight: 600;
-  text-shadow: 0 1px 1px rgba(0,0,0,0.2);
 }
 
-/* ============================================================
-   🟦 MODAL
-   ============================================================ */
+/* ===== MODAL ===== */
 dialog {
   border: none;
   border-radius: 14px;
   padding: 25px;
-  background: #fff;
   max-width: 420px;
   width: 100%;
   box-shadow: 0 6px 20px rgba(0,0,0,0.20);
@@ -267,109 +210,32 @@ dialog {
 
 dialog::backdrop {
   background: rgba(0,0,0,0.45);
-  backdrop-filter: blur(2px);
 }
 
-dialog h2 {
-  margin: 0 0 8px;
-  font-size: 1.4rem;
-  font-weight: 700;
-}
-
-#infoDia {
-  margin: 0 0 15px;
-  font-weight: 600;
-  opacity: 0.85;
-}
-
-.form-field {
-  margin-bottom: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.form-row {
-  display: flex;
-  gap: 15px;
-  margin-top: 10px;
-}
-
-.repeat-field {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-/* ===== BOTÕES ===== */
 menu {
   display: flex;
   justify-content: space-between;
-  margin-top: 18px;
-  padding: 0;
 }
-
-menu button {
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-  border: none;
-}
-
-#cancelar { background: #e4e4e4; }
 
 button.primary {
   background: #1E46E6;
   color: white;
 }
 
-button.primary:hover { background: #0d2dbb; }
-
-/* ======== SCROLLBAR ======== */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #1E46E6;
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #0d2dbb;
-}
-
-/* ============================================================
-   📱 MOBILE
-   ============================================================ */
+/* ===== MOBILE ===== */
 @media (max-width: 480px) {
-  main {
-    width: calc(100% - 18px);
-    padding: 18px;
-    margin: 12px auto 22px;
-    border-radius: 12px;
-  }
-
   .page-title h1 { font-size: 1.55rem; }
 
-  .logo-top {
-    height: 30px;
-    max-width: 150px;
+  .jovi-logo {
+    height: 40px;
+    max-width: 120px;
   }
 
-  .dev-text { font-size: 10px; }
-
-  #salaSelect { width: 100%; }
-
-  dialog {
-    max-width: 92%;
-    padding: 20px;
+  main {
+    padding: 18px;
   }
 
-  .form-row {
-    flex-direction: column;
-    gap: 10px;
+  #salaSelect {
+    width: 100%;
   }
 }
