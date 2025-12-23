@@ -13,11 +13,6 @@
 
   <!-- ======= TOPO COM LOGO + DEV INFO ======= -->
   <div class="developer-hero">
-    <img
-      src="{{ url_for('static', filename='jovi_logo.png') }}"
-      alt="JOVI Logo"
-      class="logo-top"
-    >
     <span class="dev-text">
       Developed by <strong>Arthur Braga</strong> — Branch Office São Paulo
     </span>
@@ -25,8 +20,13 @@
 
   <main>
 
-    <!-- ===== TÍTULO ===== -->
+    <!-- ===== LOGO + TÍTULO ===== -->
     <div class="page-title full-bleed">
+      <img
+        src="{{ url_for('static', filename='jovi_logo.png') }}"
+        alt="JOVI Logo"
+        class="jovi-logo"
+      >
       <h1>Meeting Room Booking</h1>
     </div>
 
@@ -36,7 +36,6 @@
       <select id="salaSelect">
         <option value="samba" selected>Samba Room</option>
         <option value="bar">Bar Room</option>
-        <option value="caipirinha">Caipirinha Room</option>
       </select>
     </div>
 
