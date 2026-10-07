@@ -35,9 +35,16 @@ function inicioDaSemana(date) {
 // ===============================
 //  API (CARREGAR / SALVAR)
 // ===============================
-async function carregarReservas() {
+// Busca só o período visível (inicio e fim inclusivos) da sala selecionada
+async function carregarReservas(inicio, fim, sala) {
   try {
-    const res = await fetch("/api/reservas");
+    const params = new URLSearchParams();
+    if (inicio) params.set("inicio", ymd(inicio));
+    if (fim) params.set("fim", ymd(fim));
+    if (sala) params.set("sala", sala);
+    const qs = params.toString();
+
+    const res = await fetch("/api/reservas" + (qs ? "?" + qs : ""));
     if (!res.ok) throw new Error("Failed loading reservations");
 
     const data = await res.json();
@@ -46,6 +53,7 @@ async function carregarReservas() {
     console.error("❌ Error loading reservations:", err);
     reservas = [];
   }
+  return reservas;
 }
 
 async function salvarReservasServidor(novas) {
@@ -58,7 +66,15 @@ async function salvarReservasServidor(novas) {
 
     if (!res.ok) {
       const txt = await res.text();
-      alert("Error saving reservation:\n" + txt);
+      let msg = txt;
+      try {
+        // Erros da API vêm como {"error": "..."}: mostra só a mensagem
+        const json = JSON.parse(txt);
+        if (json && json.error) msg = json.error;
+      } catch (e) {
+        // resposta não é JSON: mostra o texto como veio
+      }
+      alert("Error saving reservation:\n" + msg);
     }
   } catch (err) {
     alert("Server communication error.");
@@ -68,11 +84,11 @@ async function salvarReservasServidor(novas) {
 // ===============================
 //  RENDERIZAÇÃO DO CALENDÁRIO
 // ===============================
-async function gerarCalendario() {
-  await carregarReservas();
-  const salaSelecionada = document.querySelector("#salaSelect").value;
+let ultimaRenderizacao = 0;
 
-  const reservasSala = reservas.filter(r => r.sala === salaSelecionada);
+async function gerarCalendario() {
+  const minhaRenderizacao = ++ultimaRenderizacao;
+  const salaSelecionada = document.querySelector("#salaSelect").value;
 
   const inicioSemana = inicioDaSemana(currentDate);
   const dias = Array.from({ length: 5 }, (_, i) => {
@@ -80,6 +96,14 @@ async function gerarCalendario() {
     d.setDate(d.getDate() + i);
     return d;
   });
+
+  // Baixa só a semana visível (segunda a sexta) da sala selecionada
+  const reservasSemana = await carregarReservas(dias[0], dias[4], salaSelecionada);
+
+  // Se outra renderização começou enquanto esperava (ex.: troca rápida de semana), descarta esta
+  if (minhaRenderizacao !== ultimaRenderizacao) return;
+
+  const reservasSala = reservasSemana.filter(r => r.sala === salaSelecionada);
 
   const header = document.querySelector(".grid.header");
   const body = document.querySelector(".grid.body");
@@ -124,10 +148,11 @@ async function gerarCalendario() {
             body: JSON.stringify({
               id: reserva.idRepeticao || reserva.data,
               senha,
+              sala: reserva.sala,
             }),
           });
 
-          const result = await res.json();
+          const result = await res.json().catch(() => ({}));
           if (res.status === 200) {
             alert("✅ Reservation canceled.");
 

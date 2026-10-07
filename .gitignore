@@ -1,3 +1,14 @@
 credentials.json
 token_drive.pkl
 *.pkl
+token_base64.txt
+
+# Banco SQLite local (reservas ficam no servidor, nunca no git)
+data/*.db
+data/*.db-wal
+data/*.db-shm
+data/*.db-journal
+
+# Python
+__pycache__/
+.pytest_cache/
