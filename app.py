@@ -17,8 +17,15 @@ app = Flask(__name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PADRAO = os.path.join(BASE_DIR, "data", "reservas.db")
 
-# A senha de admin vem SOMENTE da variável de ambiente ADMIN_PASSWORD
-# (lida a cada requisição). Se não estiver definida, o cancelamento fica desativado.
+# A senha de admin vem SOMENTE da variável de ambiente SALAS_ADMIN_PASSWORD
+# (lida a cada requisição). Se não estiver definida ou estiver vazia, o cancelamento
+# fica desativado (503). O nome é específico de propósito: no PythonAnywhere este app
+# roda DENTRO do processo do JOVI Conecta, então nada de nomes genéricos.
+VAR_SENHA_ADMIN = "SALAS_ADMIN_PASSWORD"
+
+# Caminho opcional do banco: variável SALAS_RESERVAS_DB (padrão: data/reservas.db).
+# Também com prefixo SALAS_ para nunca pegar o banco do JOVI Conecta por engano.
+VAR_DB = "SALAS_RESERVAS_DB"
 
 MAX_ITENS_POR_POST = 5000       # repetição semanal até 2030 x 8 slots ≈ 2300 itens
 MAX_TAMANHO_TEXTO = 200         # limite para nome, email, sala e idRepeticao
@@ -33,6 +40,42 @@ REGEX_DIA = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
 
 # Limite do corpo da requisição (5000 itens cabem com folga)
 app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024
+
+# Relê o template quando o arquivo muda: trocar o visual das salas não exige
+# recarregar o processo (que é o mesmo do JOVI Conecta no PythonAnywhere).
+# Só afeta o Jinja deste app.
+app.config["TEMPLATES_AUTO_RELOAD"] = True
+
+
+# ===========================
+#  MONTAGEM SOB PREFIXO (/salas/<token>)
+# ===========================
+class _EnderecoSemBarraViraRaiz:
+    """Montado em /salas/<token>, o endereço SEM barra final chega aqui com
+    PATH_INFO vazio e o Flask responderia com um redirect 308 para ".../" (com o
+    esquema http/https que o servidor informar). Servimos a página direto, como "/".
+    Só mexe no environ das requisições que já são deste app."""
+
+    def __init__(self, wsgi_app):
+        self.wsgi_app = wsgi_app
+
+    def __call__(self, environ, start_response):
+        if not environ.get("PATH_INFO"):
+            environ["PATH_INFO"] = "/"
+        return self.wsgi_app(environ, start_response)
+
+
+app.wsgi_app = _EnderecoSemBarraViraRaiz(app.wsgi_app)
+
+
+@app.after_request
+def cabecalhos_de_privacidade(resposta):
+    """O app fica num endereço secreto (QR code na sala): não indexar e não vazar
+    o endereço no cabeçalho Referer. Vale para TODAS as respostas (página, API,
+    arquivos estáticos e erros)."""
+    resposta.headers["X-Robots-Tag"] = "noindex, nofollow"
+    resposta.headers["Referrer-Policy"] = "no-referrer"
+    return resposta
 
 
 # ===========================
@@ -58,7 +101,7 @@ CREATE INDEX IF NOT EXISTS idx_reservas_id_repeticao ON reservas (id_repeticao);
 
 def caminho_db():
     """Caminho absoluto do banco. Lido a cada chamada (testes e WSGI podem trocar)."""
-    caminho = os.environ.get("RESERVAS_DB", "").strip() or DB_PADRAO
+    caminho = os.environ.get(VAR_DB, "").strip() or DB_PADRAO
     if not os.path.isabs(caminho):
         caminho = os.path.join(BASE_DIR, caminho)
     return caminho
@@ -368,7 +411,7 @@ def delete_reserva():
     if not isinstance(payload, dict):
         return erro("Invalid request", 400)
 
-    senha_admin = os.environ.get("ADMIN_PASSWORD", "")
+    senha_admin = os.environ.get(VAR_SENHA_ADMIN, "")
     if not senha_admin:
         return erro("Admin password not configured on the server", 503)
 

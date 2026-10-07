@@ -1,6 +1,10 @@
 # ===========================
 #  WSGI - PYTHONANYWHERE (MODELO)
 # ===========================
+# Use este modelo SOMENTE se o app de salas tiver um web app PRÓPRIO no PythonAnywhere.
+# Para rodar dentro do web app do JOVI Conecta (endereço secreto /salas/<token>),
+# use o bloco de deploy/jovi_conecta_wsgi_bloco.py.
+#
 # Copie este conteúdo para o arquivo WSGI do web app no PythonAnywhere
 # (aba "Web" -> "WSGI configuration file") e troque <USERNAME> pelo seu usuário.
 import os
@@ -21,9 +25,9 @@ SENHA_ADMIN = '<COLOQUE_A_SENHA_AQUI>'
 # o cancelamento de reservas fica desativado.
 if SENHA_ADMIN.startswith('<') and SENHA_ADMIN.endswith('>'):
     SENHA_ADMIN = ''
-os.environ['ADMIN_PASSWORD'] = SENHA_ADMIN
+os.environ['SALAS_ADMIN_PASSWORD'] = SENHA_ADMIN
 
 # Opcional: outro local para o banco (padrão: <project_home>/data/reservas.db)
-# os.environ['RESERVAS_DB'] = '/home/<USERNAME>/salas-jovi/data/reservas.db'
+# os.environ['SALAS_RESERVAS_DB'] = '/home/<USERNAME>/salas-jovi/data/reservas.db'
 
 from app import app as application  # noqa: E402

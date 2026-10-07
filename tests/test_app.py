@@ -27,8 +27,8 @@ SENHA_ANTIGA = "JOVI" + "2025!"
 @pytest.fixture
 def db_path(tmp_path, monkeypatch):
     caminho = tmp_path / "sub" / "reservas.db"  # pasta ainda não existe
-    monkeypatch.setenv("RESERVAS_DB", str(caminho))
-    monkeypatch.setenv("ADMIN_PASSWORD", SENHA)
+    monkeypatch.setenv("SALAS_RESERVAS_DB", str(caminho))
+    monkeypatch.setenv("SALAS_ADMIN_PASSWORD", SENHA)
     return caminho
 
 
@@ -81,15 +81,22 @@ def test_get_vazio_cria_pasta_e_banco(client, db_path):
 
 
 def test_caminho_padrao_absoluto(monkeypatch):
-    monkeypatch.delenv("RESERVAS_DB", raising=False)
+    monkeypatch.delenv("SALAS_RESERVAS_DB", raising=False)
     esperado = os.path.join(os.path.dirname(os.path.abspath(app_module.__file__)), "data", "reservas.db")
     assert app_module.caminho_db() == esperado
     assert os.path.isabs(app_module.caminho_db())
 
 
 def test_caminho_relativo_vira_absoluto(monkeypatch):
-    monkeypatch.setenv("RESERVAS_DB", "outra/reservas.db")
+    monkeypatch.setenv("SALAS_RESERVAS_DB", "outra/reservas.db")
     assert app_module.caminho_db() == os.path.join(app_module.BASE_DIR, "outra", "reservas.db")
+
+
+def test_caminho_ignora_a_variavel_generica_reservas_db(monkeypatch, tmp_path):
+    # O processo é compartilhado com o JOVI Conecta: só SALAS_RESERVAS_DB vale
+    monkeypatch.delenv("SALAS_RESERVAS_DB", raising=False)
+    monkeypatch.setenv("RESERVAS_DB", str(tmp_path / "banco_do_jovi.db"))
+    assert app_module.caminho_db() == app_module.DB_PADRAO
 
 
 def test_sem_google_drive_e_sem_senha_fixa():
@@ -370,7 +377,7 @@ def test_conflito_concorrente_entre_processos(client, db_path):
     )
     procs = [
         subprocess.Popen([sys.executable, "-c", script, RAIZ, f"p{n}"], stdout=subprocess.PIPE,
-                         env=dict(os.environ, RESERVAS_DB=str(db_path)), text=True)
+                         env=dict(os.environ, SALAS_RESERVAS_DB=str(db_path)), text=True)
         for n in range(4)
     ]
     # a última linha da saída é o status HTTP (antes pode vir o log do app)
@@ -444,15 +451,25 @@ def test_delete_senha_errada(client):
 
 
 @pytest.mark.parametrize("valor", [None, ""])
-def test_delete_sem_admin_password_configurada(client, monkeypatch, valor):
+def test_delete_sem_salas_admin_password_configurada(client, monkeypatch, valor):
     if valor is None:
-        monkeypatch.delenv("ADMIN_PASSWORD", raising=False)
+        monkeypatch.delenv("SALAS_ADMIN_PASSWORD", raising=False)
     else:
-        monkeypatch.setenv("ADMIN_PASSWORD", valor)
+        monkeypatch.setenv("SALAS_ADMIN_PASSWORD", valor)
     assert client.post("/api/reservas", json=reserva()).status_code == 201
     res = apagar(client, id="rep-1", senha="")
     assert res.status_code == 503
     assert res.get_json() == {"error": "Admin password not configured on the server"}
+    assert len(todas(client)) == 1
+
+
+def test_delete_ignora_a_variavel_generica_admin_password(client, monkeypatch):
+    # O processo é compartilhado com o JOVI Conecta: só SALAS_ADMIN_PASSWORD vale
+    monkeypatch.delenv("SALAS_ADMIN_PASSWORD", raising=False)
+    monkeypatch.setenv("ADMIN_PASSWORD", SENHA)
+    assert client.post("/api/reservas", json=reserva()).status_code == 201
+    res = apagar(client, id=todas(client)[0]["idRepeticao"], senha=SENHA)
+    assert res.status_code == 503
     assert len(todas(client)) == 1
 
 
@@ -478,6 +495,71 @@ def test_delete_nao_encontrado(client):
 
 
 # ===========================
+#  PRIVACIDADE (NOINDEX) E PREFIXO (/salas/<token>)
+# ===========================
+def assert_cabecalhos_privados(res):
+    assert res.headers["X-Robots-Tag"] == "noindex, nofollow"
+    assert res.headers["Referrer-Policy"] == "no-referrer"
+
+
+@pytest.mark.parametrize("metodo, caminho, corpo", [
+    ("get", "/", None),
+    ("get", "/api/reservas", None),
+    ("post", "/api/reservas", reserva()),
+    ("post", "/api/reservas", "invalido"),
+    ("post", "/api/reservas/delete", {"id": "x", "senha": "errada"}),
+    ("get", "/static/style.css", None),
+    ("get", "/static/script.js", None),
+    ("get", "/nao-existe", None),
+    ("delete", "/api/reservas", None),
+])
+def test_cabecalhos_noindex_em_todas_as_respostas(client, metodo, caminho, corpo):
+    res = getattr(client, metodo)(caminho, json=corpo)
+    assert_cabecalhos_privados(res)
+    res.close()
+
+
+def test_pagina_tem_noindex_e_base_vazia_na_raiz(client):
+    html = client.get("/").get_data(as_text=True)
+    assert '<meta name="robots" content="noindex, nofollow"' in html
+    assert "window.SALAS_BASE = \"\";" in html
+    assert 'href="/static/style.css' in html and 'src="/static/script.js' in html
+
+
+def test_script_js_usa_a_base_injetada():
+    with open(os.path.join(RAIZ, "static", "script.js"), encoding="utf-8") as f:
+        js = f.read()
+    assert 'const BASE = window.SALAS_BASE || "";' in js
+    assert 'fetch("/' not in js and "fetch('/" not in js and "fetch(`/" not in js
+    assert js.count('fetch(BASE + "/api/reservas') == 3
+
+
+@pytest.mark.parametrize("caminho", ["", "/"])
+def test_pagina_e_api_sob_prefixo(client, caminho):
+    """Simula o app montado em /salas/<token> (SCRIPT_NAME), com e sem barra final."""
+    from werkzeug.test import EnvironBuilder, run_wsgi_app
+    prefixo = "/salas/tok_ABC-123"
+
+    def chamar(path_info, **kw):
+        env = EnvironBuilder(**kw).get_environ()
+        env["SCRIPT_NAME"], env["PATH_INFO"] = prefixo, path_info
+        corpo, status, cabecalhos = run_wsgi_app(app_module.app, env, buffered=True)
+        return status, cabecalhos, b"".join(corpo).decode("utf-8")
+
+    status, cabecalhos, html = chamar(caminho)
+    assert status == "200 OK"  # sem redirect 308 para ".../"
+    assert cabecalhos["X-Robots-Tag"] == "noindex, nofollow"
+    assert f'window.SALAS_BASE = "{prefixo}";' in html
+    assert f'href="{prefixo}/static/style.css' in html
+    assert f'src="{prefixo}/static/script.js' in html
+
+    assert chamar("/api/reservas", method="POST", json=reserva())[0] == "201 CREATED"
+    status, _, corpo = chamar("/api/reservas")
+    assert status == "200 OK" and "Sales Meeting" in corpo
+    assert chamar("/static/script.js")[0] == "200 OK"
+
+
+# ===========================
 #  MODELO WSGI DO PYTHONANYWHERE
 # ===========================
 def rodar_modelo_wsgi(monkeypatch, troca=None):
@@ -486,11 +568,11 @@ def rodar_modelo_wsgi(monkeypatch, troca=None):
     if troca:
         fonte = fonte.replace("<COLOQUE_A_SENHA_AQUI>", troca)  # "substituir tudo" do editor
     monkeypatch.setattr(sys, "path", list(sys.path))
-    monkeypatch.setenv("ADMIN_PASSWORD", "valor-anterior")
+    monkeypatch.setenv("SALAS_ADMIN_PASSWORD", "valor-anterior")
     ns = {}
     exec(compile(fonte, "pythonanywhere_wsgi.py", "exec"), ns)
     assert ns["application"] is app_module.app
-    return os.environ["ADMIN_PASSWORD"]
+    return os.environ["SALAS_ADMIN_PASSWORD"]
 
 
 def test_modelo_wsgi_sem_trocar_a_senha_desativa_cancelamento(monkeypatch):
@@ -499,3 +581,10 @@ def test_modelo_wsgi_sem_trocar_a_senha_desativa_cancelamento(monkeypatch):
 
 def test_modelo_wsgi_substituir_tudo_define_a_senha(monkeypatch):
     assert rodar_modelo_wsgi(monkeypatch, troca="MinhaSenha123") == "MinhaSenha123"
+
+
+def test_template_recarrega_sozinho():
+    # Trocar o visual das salas não pode exigir recarregar o JOVI Conecta
+    import app as modulo_app
+    assert modulo_app.app.config["TEMPLATES_AUTO_RELOAD"] is True
+    assert modulo_app.app.jinja_env.auto_reload is True

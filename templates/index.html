@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Endereço secreto (QR code na sala): não indexar e não vazar a URL no Referer -->
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="referrer" content="no-referrer" />
   <title>Meeting Room Booking - JOVI</title>
 
   <!-- CSS -->
@@ -103,6 +106,8 @@
   </dialog>
 
   <!-- JS -->
+  <!-- Prefixo onde o app está montado ("" em "/", "/salas/<token>" no JOVI Conecta) -->
+  <script>window.SALAS_BASE = {{ request.script_root|tojson }};</script>
   <script src="{{ url_for('static', filename='script.js') }}"></script>
 
 </body>

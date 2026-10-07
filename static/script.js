@@ -1,6 +1,10 @@
 // ===============================
 //  CONFIGURAÇÕES GERAIS
 // ===============================
+// Prefixo onde o app está montado, injetado pelo index.html:
+// "" quando roda na raiz ("/"), "/salas/<token>" dentro do JOVI Conecta
+const BASE = window.SALAS_BASE || "";
+
 let currentDate = new Date();
 let reservas = [];
 
@@ -44,7 +48,7 @@ async function carregarReservas(inicio, fim, sala) {
     if (sala) params.set("sala", sala);
     const qs = params.toString();
 
-    const res = await fetch("/api/reservas" + (qs ? "?" + qs : ""));
+    const res = await fetch(BASE + "/api/reservas" + (qs ? "?" + qs : ""));
     if (!res.ok) throw new Error("Failed loading reservations");
 
     const data = await res.json();
@@ -58,7 +62,7 @@ async function carregarReservas(inicio, fim, sala) {
 
 async function salvarReservasServidor(novas) {
   try {
-    const res = await fetch("/api/reservas", {
+    const res = await fetch(BASE + "/api/reservas", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(novas),
@@ -142,7 +146,7 @@ async function gerarCalendario() {
           const senha = prompt(`To cancel "${reserva.nome}", enter admin password:`);
           if (!senha) return;
 
-          const res = await fetch("/api/reservas/delete", {
+          const res = await fetch(BASE + "/api/reservas/delete", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
