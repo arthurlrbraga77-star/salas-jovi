@@ -2,7 +2,6 @@ from flask import Flask, render_template, jsonify, request
 from contextlib import closing
 import datetime
 import hmac
-import math
 import os
 import re
 import sqlite3
@@ -29,6 +28,7 @@ TIMEOUT_DB_SEGUNDOS = 15        # espera pelo lock do SQLite (vários workers)
 LOTE_SQL = 500                  # itens por consulta "IN (...)"
 
 REGEX_DATA_HORA = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}")
+MINUTOS_DO_SLOT = ("00", "30")  # cada reserva ocupa um slot de 30 min: HH:00 ou HH:30
 REGEX_DIA = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}")
 
 # Limite do corpo da requisição (5000 itens cabem com folga)
@@ -140,7 +140,7 @@ def texto_obrigatorio(item, campo):
     return valor, None
 
 
-def validar_reserva(item, id_padrao):
+def validar_reserva(item):
     """Valida e normaliza um item recebido. Retorna (reserva, erro)."""
     if not isinstance(item, dict):
         return None, "each reservation must be a JSON object"
@@ -148,6 +148,10 @@ def validar_reserva(item, id_padrao):
     data = item.get("data")
     if not data_hora_valida(data):
         return None, "'data' must be a valid date/time in the format YYYY-MM-DDTHH:MM"
+    # O índice UNIQUE (sala, data) só impede reserva dupla se todo mundo
+    # começar exatamente num slot de 30 min (08:15 "passaria por cima" das 08:00)
+    if data[-2:] not in MINUTOS_DO_SLOT:
+        return None, "'data' must start on a 30-minute slot (minutes 00 or 30)"
 
     nome, msg = texto_obrigatorio(item, "nome")
     if msg:
@@ -159,11 +163,11 @@ def validar_reserva(item, id_padrao):
     if msg:
         return None, msg
 
-    # idRepeticao é opcional: se faltar, todos os itens desta requisição
-    # sem id compartilham o mesmo uuid (são um único agendamento)
+    # idRepeticao é opcional ("" = não veio). O valor final é sempre gerado
+    # pelo servidor em add_reserva(); aqui só validamos o que o cliente mandou.
     id_repeticao = item.get("idRepeticao")
     if id_repeticao is None or (isinstance(id_repeticao, str) and not id_repeticao.strip()):
-        id_repeticao = id_padrao
+        id_repeticao = ""
     elif not isinstance(id_repeticao, str):
         return None, "'idRepeticao' must be a string"
     else:
@@ -171,9 +175,11 @@ def validar_reserva(item, id_padrao):
         if len(id_repeticao) > MAX_TAMANHO_TEXTO:
             return None, f"'idRepeticao' must be at most {MAX_TAMANHO_TEXTO} characters"
 
+    # A comparação de faixa também recusa NaN/Infinity e não converte inteiros
+    # gigantes para float (math.isfinite daria OverflowError -> erro 500)
     duracao = item.get("duracao")
     if (isinstance(duracao, bool) or not isinstance(duracao, (int, float))
-            or not math.isfinite(duracao) or not 0 < duracao <= MAX_DURACAO_HORAS):
+            or not 0 < duracao <= MAX_DURACAO_HORAS):
         return None, f"'duracao' must be a number of hours greater than 0 and at most {MAX_DURACAO_HORAS}"
 
     return {
@@ -286,14 +292,24 @@ def add_reserva():
         return erro(f"Too many reservations in one request (max {MAX_ITENS_POR_POST})", 400)
 
     # 1) Valida todos os itens antes de tocar no banco
-    id_padrao = str(uuid.uuid4())
     novas = []
     for posicao, item in enumerate(itens, start=1):
-        reserva, msg = validar_reserva(item, id_padrao)
+        reserva, msg = validar_reserva(item)
         if msg:
             prefixo = f"Reservation #{posicao}: " if len(itens) > 1 else ""
             return erro(f"Invalid reservation. {prefixo}{msg}", 400)
         novas.append(reserva)
+
+    # O idRepeticao gravado é SEMPRE um uuid novo gerado aqui. O id enviado pelo
+    # cliente só serve para agrupar os itens desta requisição (itens sem id formam
+    # um grupo). Assim ninguém consegue "pendurar" uma reserva na série de outra
+    # pessoa (ou usar uma data como id) e fazer o cancelamento apagar as duas.
+    ids_do_servidor = {}
+    for r in novas:
+        id_cliente = r["id_repeticao"]
+        if id_cliente not in ids_do_servidor:
+            ids_do_servidor[id_cliente] = str(uuid.uuid4())
+        r["id_repeticao"] = ids_do_servidor[id_cliente]
 
     # 2) Horários repetidos dentro da própria requisição
     vistos, repetidos = set(), set()

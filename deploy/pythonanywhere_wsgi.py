@@ -12,9 +12,16 @@ if project_home not in sys.path:
 
 # Senha de admin para cancelar reservas.
 # A senha REAL fica SOMENTE no arquivo WSGI do PythonAnywhere, NUNCA no git.
-# Enquanto o placeholder não for trocado, o cancelamento fica desativado.
+# Escolha uma senha NOVA: não reutilize a senha antiga do sistema, ela está
+# no histórico do git e qualquer pessoa com acesso ao repositório pode vê-la.
+# Troque o texto entre aspas abaixo (inclusive os sinais < e >) pela senha.
 SENHA_ADMIN = '<COLOQUE_A_SENHA_AQUI>'
-os.environ['ADMIN_PASSWORD'] = '' if SENHA_ADMIN == '<COLOQUE_A_SENHA_AQUI>' else SENHA_ADMIN
+
+# Enquanto o texto acima não for trocado (ainda começa com '<' e termina com '>'),
+# o cancelamento de reservas fica desativado.
+if SENHA_ADMIN.startswith('<') and SENHA_ADMIN.endswith('>'):
+    SENHA_ADMIN = ''
+os.environ['ADMIN_PASSWORD'] = SENHA_ADMIN
 
 # Opcional: outro local para o banco (padrão: <project_home>/data/reservas.db)
 # os.environ['RESERVAS_DB'] = '/home/<USERNAME>/salas-jovi/data/reservas.db'

@@ -6,6 +6,7 @@ import os
 import subprocess
 import sys
 import threading
+import uuid
 
 import pytest
 
@@ -15,6 +16,9 @@ sys.path.insert(0, RAIZ)
 import app as app_module  # noqa: E402
 
 SENHA = "senha-de-teste"
+# A senha antiga (que estava fixa no código e continua no histórico do git).
+# Montada em partes para não copiar o segredo literal para arquivos novos.
+SENHA_ANTIGA = "JOVI" + "2025!"
 
 
 # ===========================
@@ -46,6 +50,13 @@ def reserva(data="2030-01-07T08:00", sala="samba", **extra):
     }
     item.update(extra)
     return item
+
+
+def eh_uuid(texto):
+    try:
+        return str(uuid.UUID(texto)) == texto
+    except (TypeError, ValueError):
+        return False
 
 
 def todas(client, **params):
@@ -86,7 +97,7 @@ def test_sem_google_drive_e_sem_senha_fixa():
     assert not any(m.startswith("google") for m in sys.modules)
     with open(os.path.join(RAIZ, "app.py"), encoding="utf-8") as f:
         fonte = f.read()
-    assert "JOVI2025!" not in fonte
+    assert SENHA_ANTIGA not in fonte
     assert "drive_service" not in fonte
 
 
@@ -103,12 +114,14 @@ def test_post_unico(client):
     res = client.post("/api/reservas", json=reserva())
     assert res.status_code == 201
     assert res.get_json() == {"status": "ok", "count": 1}
-    assert todas(client) == [{
+    lista = todas(client)
+    assert eh_uuid(lista[0]["idRepeticao"])  # gerado pelo servidor
+    assert lista == [{
         "data": "2030-01-07T08:00",
         "nome": "Sales Meeting",
         "email": "a@jovimobile.com",
         "duracao": 1.0,
-        "idRepeticao": "rep-1",
+        "idRepeticao": lista[0]["idRepeticao"],
         "sala": "samba",
     }]
 
@@ -133,7 +146,21 @@ def test_post_faz_trim_e_gera_id_repeticao(client):
     assert lista[0]["nome"] == "Daily" and lista[0]["email"] == "x@y.com"
     # sem idRepeticao: a requisição inteira vira um único agendamento
     assert lista[0]["idRepeticao"] == lista[1]["idRepeticao"]
-    assert len(lista[0]["idRepeticao"]) == 36
+    assert eh_uuid(lista[0]["idRepeticao"])
+
+
+def test_post_id_repeticao_sempre_gerado_pelo_servidor(client):
+    itens = [
+        reserva(data="2030-01-07T08:00", idRepeticao="A"),
+        reserva(data="2030-01-14T08:00", idRepeticao="A"),
+        reserva(data="2030-01-07T09:00", idRepeticao="B"),
+    ]
+    assert client.post("/api/reservas", json=itens).status_code == 201
+    ids = {r["data"]: r["idRepeticao"] for r in todas(client)}
+    # o id do cliente só agrupa os itens da mesma requisição
+    assert ids["2030-01-07T08:00"] == ids["2030-01-14T08:00"] != ids["2030-01-07T09:00"]
+    assert all(eh_uuid(i) for i in ids.values())
+    assert not {"A", "B"} & set(ids.values())
 
 
 def test_post_lista_grande_repeticao_semanal(client):
@@ -197,6 +224,8 @@ def test_get_filtro_invalido(client, params):
 @pytest.mark.parametrize("item", [
     reserva(data="2030-01-07 08:00"),
     reserva(data="2030-01-07T08:00:00"),
+    reserva(data="2030-01-07T08:15"),
+    reserva(data="2030-01-07T03:07"),
     reserva(data="2030-02-30T08:00"),
     reserva(data="2030-01-07T25:00"),
     reserva(data=None),
@@ -213,11 +242,30 @@ def test_get_filtro_invalido(client, params):
     reserva(duracao=0),
     reserva(duracao=-1),
     reserva(duracao=None),
+    reserva(duracao=25),
+    reserva(duracao=10 ** 400),
 ])
 def test_post_item_invalido(client, item):
     res = client.post("/api/reservas", json=item)
     assert res.status_code == 400
     assert res.get_json()["error"].startswith("Invalid reservation")
+    assert todas(client) == []
+
+
+def test_post_horario_fora_do_slot_nao_sobrepoe(client):
+    assert client.post("/api/reservas", json=reserva(data="2030-01-07T08:00")).status_code == 201
+    res = client.post("/api/reservas", json=reserva(data="2030-01-07T08:15"))
+    assert res.status_code == 400
+    assert "30-minute slot" in res.get_json()["error"]
+    assert len(todas(client)) == 1
+
+
+@pytest.mark.parametrize("valor", ["NaN", "Infinity", "-Infinity", "1" + "0" * 400])
+def test_post_duracao_numero_estranho(client, valor):
+    corpo = ('{"data": "2030-01-07T08:00", "nome": "n", "email": "e", "sala": "s", "duracao": %s}' % valor)
+    res = client.post("/api/reservas", data=corpo, content_type="application/json")
+    assert res.status_code == 400
+    assert "duracao" in res.get_json()["error"]
     assert todas(client) == []
 
 
@@ -338,11 +386,34 @@ def test_delete_por_id_repeticao(client):
     itens = [reserva(data=f"2030-01-{d:02d}T08:00", idRepeticao="serie") for d in (7, 14, 21)]
     assert client.post("/api/reservas", json=itens).status_code == 201
     assert client.post("/api/reservas", json=reserva(data="2030-01-08T08:00", idRepeticao="outra")).status_code == 201
+    ids = {r["data"]: r["idRepeticao"] for r in todas(client)}
 
-    res = apagar(client, id="serie", senha=SENHA)
+    # o front-end manda o idRepeticao que recebeu do GET
+    res = apagar(client, id=ids["2030-01-07T08:00"], senha=SENHA)
     assert res.status_code == 200
     assert res.get_json() == {"message": "Reservation deleted", "deleted": 3}
-    assert [r["idRepeticao"] for r in todas(client)] == ["outra"]
+    assert [r["idRepeticao"] for r in todas(client)] == [ids["2030-01-08T08:00"]]
+
+
+def test_nao_da_para_pendurar_reserva_na_serie_de_outra_pessoa(client):
+    itens = [reserva(data=f"2030-01-{d:02d}T08:00", idRepeticao="serie") for d in (7, 14, 21, 28)]
+    assert client.post("/api/reservas", json=itens).status_code == 201
+    id_legitimo = todas(client)[0]["idRepeticao"]
+
+    # alguém copia o id da série (visível no GET) e uma data de outra reserva
+    spam = [
+        reserva(data="2030-01-08T10:00", nome="SPAM", idRepeticao=id_legitimo),
+        reserva(data="2030-01-09T10:00", nome="SPAM", idRepeticao="2030-01-07T08:00"),
+    ]
+    assert client.post("/api/reservas", json=spam).status_code == 201
+    ids_spam = {r["idRepeticao"] for r in todas(client) if r["nome"] == "SPAM"}
+    assert len(ids_spam) == 2 and id_legitimo not in ids_spam
+
+    # cancelar o spam não apaga a série legítima
+    for id_spam in ids_spam:
+        res = apagar(client, id=id_spam, senha=SENHA, sala="samba")
+        assert res.get_json()["deleted"] == 1
+    assert [r["idRepeticao"] for r in todas(client)] == [id_legitimo] * 4
 
 
 def test_delete_por_data(client):
@@ -364,8 +435,9 @@ def test_delete_respeita_sala_quando_informada(client):
 
 def test_delete_senha_errada(client):
     assert client.post("/api/reservas", json=reserva()).status_code == 201
-    for senha in ("errada", "", None, 123, "JOVI2025!", "sénha"):
-        res = apagar(client, id="rep-1", senha=senha)
+    id_rep = todas(client)[0]["idRepeticao"]
+    for senha in ("errada", "", None, 123, SENHA_ANTIGA, "sénha"):
+        res = apagar(client, id=id_rep, senha=senha)
         assert res.status_code == 403
         assert res.get_json() == {"error": "Incorrect password"}
     assert len(todas(client)) == 1
@@ -403,3 +475,27 @@ def test_delete_nao_encontrado(client):
     assert res.status_code == 404
     assert res.get_json() == {"error": "Reservation not found"}
     assert len(todas(client)) == 1
+
+
+# ===========================
+#  MODELO WSGI DO PYTHONANYWHERE
+# ===========================
+def rodar_modelo_wsgi(monkeypatch, troca=None):
+    with open(os.path.join(RAIZ, "deploy", "pythonanywhere_wsgi.py"), encoding="utf-8") as f:
+        fonte = f.read()
+    if troca:
+        fonte = fonte.replace("<COLOQUE_A_SENHA_AQUI>", troca)  # "substituir tudo" do editor
+    monkeypatch.setattr(sys, "path", list(sys.path))
+    monkeypatch.setenv("ADMIN_PASSWORD", "valor-anterior")
+    ns = {}
+    exec(compile(fonte, "pythonanywhere_wsgi.py", "exec"), ns)
+    assert ns["application"] is app_module.app
+    return os.environ["ADMIN_PASSWORD"]
+
+
+def test_modelo_wsgi_sem_trocar_a_senha_desativa_cancelamento(monkeypatch):
+    assert rodar_modelo_wsgi(monkeypatch) == ""
+
+
+def test_modelo_wsgi_substituir_tudo_define_a_senha(monkeypatch):
+    assert rodar_modelo_wsgi(monkeypatch, troca="MinhaSenha123") == "MinhaSenha123"
