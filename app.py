@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, redirect
 from contextlib import closing
 import datetime
 import hmac
@@ -26,6 +26,11 @@ VAR_SENHA_ADMIN = "SALAS_ADMIN_PASSWORD"
 # Caminho opcional do banco: variável SALAS_RESERVAS_DB (padrão: data/reservas.db).
 # Também com prefixo SALAS_ para nunca pegar o banco do JOVI Conecta por engano.
 VAR_DB = "SALAS_RESERVAS_DB"
+
+# Hospedagem antiga (Render): o QR code impresso antigo aponta para lá. Se esta
+# variável tiver um endereço https://, toda visita é mandada para ele (o endereço
+# novo é secreto, por isso fica só na variável de ambiente, nunca no código).
+VAR_REDIRECT = "SALAS_REDIRECT_URL"
 
 MAX_ITENS_POR_POST = 5000       # repetição semanal até 2030 x 8 slots ≈ 2300 itens
 MAX_TAMANHO_TEXTO = 200         # limite para nome, email, sala e idRepeticao
@@ -66,6 +71,16 @@ class _EnderecoSemBarraViraRaiz:
 
 
 app.wsgi_app = _EnderecoSemBarraViraRaiz(app.wsgi_app)
+
+
+@app.before_request
+def redirecionar_endereco_antigo():
+    """No Render (endereço do QR antigo), manda tudo para o endereço novo."""
+    destino = os.environ.get(VAR_REDIRECT, "").strip()
+    if destino.startswith("https://"):
+        # 302 (temporário): o navegador não grava o destino para sempre
+        return redirect(destino, code=302)
+    return None
 
 
 @app.after_request
