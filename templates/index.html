@@ -1,114 +1,200 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0E04C2">
   <!-- Endereço secreto (QR code na sala): não indexar e não vazar a URL no Referer -->
-  <meta name="robots" content="noindex, nofollow" />
-  <meta name="referrer" content="no-referrer" />
-  <title>Meeting Room Booking - JOVI</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <meta name="color-scheme" content="light">
+  <title>Samba Room · Meeting Room Booking — JOVI</title>
 
-  <!-- CSS -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  {#- Versão dos arquivos estáticos: o template recarrega sozinho, então trocar este
+      número garante que o navegador não use um script.js/style.css antigo do cache. #}
+  {%- set v = "2" %}
+
+  <!-- Fredoka só para o selo "SALAS" (subconjunto de 3 letras, sem bloquear a página) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600&amp;text=SALAS&amp;display=swap" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600&amp;text=SALAS&amp;display=swap"></noscript>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v=v) }}">
+
+  <!-- Prefixo onde o app está montado ("" em "/", "/salas/<token>" no JOVI Conecta) -->
+  <script>window.SALAS_BASE = {{ request.script_root|tojson }};</script>
+  <script defer src="{{ url_for('static', filename='script.js', v=v) }}"></script>
 </head>
 
 <body>
+  <!-- Ícones (usados pelo HTML e pelo script.js) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <symbol id="i-left" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-right" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></g></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></g></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8.5" r="4"/><path d="M4.5 20c1.4-3.6 4.3-5.5 7.5-5.5s6.1 1.9 7.5 5.5"/></g></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5v.01"/></g></symbol>
+    <symbol id="i-repeat" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11V9a3 3 0 013-3h12l-3-3M20 13v2a3 3 0 01-3 3H5l3 3"/></g></symbol>
+  </svg>
 
-  <!-- ======= TOPO COM LOGO + DEV INFO ======= -->
-  <div class="developer-hero">
-    <span class="dev-text">
-      Developed by <strong>Arthur Braga</strong> — Branch Office São Paulo
-    </span>
+  <div class="page">
+    <div class="wrap">
+
+      <!-- ======= TOPO (estilo JOVI Conecta) ======= -->
+      <header class="topbar">
+        <div class="brand">
+          <img class="brand-logo" src="{{ url_for('static', filename='jovi_logo_topbar.png') }}"
+               alt="JOVI" width="96" height="26">
+          <span class="brand-stamp" aria-hidden="true">Salas</span>
+        </div>
+        <h1 class="room-name" id="roomName">Samba Room</h1>
+        <p class="topbar-sub">Meeting Room Booking</p>
+        <button type="button" class="now-pill" id="nowPill" hidden></button>
+      </header>
+
+      <main>
+        <!-- ======= SEMANA ======= -->
+        <nav class="weekbar" aria-label="Week">
+          <button type="button" class="icon-btn" id="prevWeek" aria-label="Previous week">
+            <svg class="ic" aria-hidden="true"><use href="#i-left"/></svg>
+          </button>
+          <div class="weekbar-mid">
+            <h2 class="week-label" id="weekLabel" aria-live="polite">&nbsp;</h2>
+            <button type="button" class="pill" id="todayBtn">Today</button>
+          </div>
+          <button type="button" class="icon-btn" id="nextWeek" aria-label="Next week">
+            <svg class="ic" aria-hidden="true"><use href="#i-right"/></svg>
+          </button>
+        </nav>
+
+        <!-- ======= DIAS (no celular: um dia por vez) ======= -->
+        <div class="days-bar">
+          <div class="days" id="days" role="group" aria-label="Day"></div>
+        </div>
+
+        <p class="hint" id="dayHint" hidden></p>
+
+        <!-- ======= HORÁRIOS ======= -->
+        <section class="sched" id="schedule" aria-label="Schedule" aria-busy="true"></section>
+      </main>
+
+      <footer class="credit">
+        Developed by <strong>Arthur Braga</strong> — Branch Office São Paulo
+      </footer>
+    </div>
   </div>
 
-  <main>
-
-    <!-- ===== LOGO + TÍTULO ===== -->
-    <div class="page-title full-bleed">
-      <img
-        src="{{ url_for('static', filename='jovi_logo.png') }}"
-        alt="JOVI Logo"
-        class="jovi-logo"
-      >
-      <h1>Meeting Room Booking</h1>
-    </div>
-
-    <!-- ===== SELETOR DE SALA ===== -->
-    <div class="sala-select">
-      <label for="salaSelect">Room:</label>
-      <select id="salaSelect">
-        <option value="samba" selected>Samba Room</option>
-      </select>
-    </div>
-
-    <!-- ===== NAVEGAÇÃO DE SEMANA ===== -->
-    <div class="week-nav">
-      <button id="semanaAnterior">◀ Week</button>
-      <button id="semanaAtualBtn">Today</button>
-      <button id="semanaProxima">Week ▶</button>
-    </div>
-
-    <p class="tip">
-      💡 Tip: click on a free time slot to book. Choose a duration (30m to 4h) and, if you want, mark it as weekly recurring.
-    </p>
-
-    <p id="semanaAtual"></p>
-
-    <!-- ===== CALENDÁRIO ===== -->
-    <div class="calendar-scroll">
-      <div class="calendar-grid">
-        <div class="grid header" aria-label="Calendar header"></div>
-        <div class="grid body" aria-label="Calendar body"></div>
-      </div>
-    </div>
-
-  </main>
-
-  <!-- ===== MODAL ===== -->
-  <dialog id="reservaModal">
-    <h2>New Reservation</h2>
-    <p id="infoDia"></p>
-
-    <div class="form-field">
-      <label for="nome">Title:</label>
-      <input type="text" id="nome" placeholder="Sales Meeting" maxlength="200">
-    </div>
-
-    <div class="form-field">
-      <label for="email">E-mail:</label>
-      <input type="email" id="email" placeholder="example@jovimobile.com" maxlength="200">
-    </div>
-
-    <div class="form-row">
-      <div class="form-field">
-        <label for="duracao">Duration:</label>
-        <select id="duracao">
-          <option value="0.5">30 min</option>
-          <option value="1">1 hour</option>
-          <option value="2">2 hours</option>
-          <option value="3">3 hours</option>
-          <option value="4">4 hours</option>
-        </select>
+  <!-- ======= NOVA RESERVA ======= -->
+  <dialog id="bookSheet" class="sheet" aria-labelledby="bookTitle" aria-describedby="bookWhen">
+    <form id="bookForm" class="sheet-body" novalidate>
+      <div class="sheet-head">
+        <div>
+          <h2 class="sheet-title" id="bookTitle" tabindex="-1">New reservation</h2>
+          <p class="sheet-when" id="bookWhen"></p>
+        </div>
+        <button type="button" class="icon-btn icon-btn-plain" data-close aria-label="Close">
+          <svg class="ic" aria-hidden="true"><use href="#i-close"/></svg>
+        </button>
       </div>
 
-      <div class="form-field repeat-field">
-        <label>
-          <input type="checkbox" id="repetir">
-          Repeat weekly (∞)
+      <div class="jovi-alert jovi-alert-danger" id="bookError" role="alert" hidden></div>
+
+      <label class="jovi-label" for="nome">Title</label>
+      <input class="jovi-input" type="text" id="nome" name="nome" maxlength="200"
+             placeholder="e.g. Sales meeting" autocomplete="off" enterkeyhint="next"
+             required aria-describedby="nomeErr">
+      <p class="field-err" id="nomeErr" hidden></p>
+
+      <label class="jovi-label" for="email">E-mail</label>
+      <input class="jovi-input" type="email" id="email" name="email" maxlength="200"
+             placeholder="name@jovimobile.com" autocomplete="email" inputmode="email"
+             autocapitalize="off" spellcheck="false" enterkeyhint="done"
+             required aria-describedby="emailErr">
+      <p class="field-err" id="emailErr" hidden></p>
+
+      <fieldset class="dur">
+        <legend class="jovi-label">Duration</legend>
+        <div class="seg" id="durGroup">
+          <label class="seg-opt"><input type="radio" name="dur" value="0.5"><span>30 min</span></label>
+          <label class="seg-opt"><input type="radio" name="dur" value="1"><span>1 h</span></label>
+          <label class="seg-opt"><input type="radio" name="dur" value="2"><span>2 h</span></label>
+          <label class="seg-opt"><input type="radio" name="dur" value="3"><span>3 h</span></label>
+          <label class="seg-opt"><input type="radio" name="dur" value="4"><span>4 h</span></label>
+        </div>
+        <p class="dur-hint" id="durHint" aria-live="polite"></p>
+      </fieldset>
+
+      <div class="switch-row">
+        <label class="switch-text" for="repetir">
+          <span class="switch-title">Repeat weekly</span>
+          <span class="switch-sub" id="repeatHint"></span>
         </label>
+        <input type="checkbox" class="switch" id="repetir" role="switch" aria-describedby="repeatHint">
       </div>
-    </div>
 
-    <menu>
-      <button id="cancelar">Cancel</button>
-      <button id="confirmar" class="primary">Confirm</button>
-    </menu>
+      <div class="sheet-actions">
+        <button type="button" class="jovi-btn jovi-btn-ghost" data-close>Cancel</button>
+        <button type="submit" class="jovi-btn jovi-btn-primary" id="bookSubmit">Confirm</button>
+      </div>
+    </form>
   </dialog>
 
-  <!-- JS -->
-  <!-- Prefixo onde o app está montado ("" em "/", "/salas/<token>" no JOVI Conecta) -->
-  <script>window.SALAS_BASE = {{ request.script_root|tojson }};</script>
-  <script src="{{ url_for('static', filename='script.js') }}"></script>
+  <!-- ======= DETALHES / CANCELAMENTO ======= -->
+  <dialog id="infoSheet" class="sheet" aria-labelledby="infoTitle">
+    <div class="sheet-body">
+      <div class="sheet-head">
+        <div class="sheet-head-text">
+          <span class="jovi-badge jovi-badge-info" id="infoBadge">Booked</span>
+          <h2 class="sheet-title" id="infoTitle" tabindex="-1"></h2>
+        </div>
+        <button type="button" class="icon-btn icon-btn-plain" data-close aria-label="Close">
+          <svg class="ic" aria-hidden="true"><use href="#i-close"/></svg>
+        </button>
+      </div>
 
+      <dl class="meta">
+        <div class="meta-row">
+          <dt><svg class="ic" aria-hidden="true"><use href="#i-cal"/></svg><span class="sr-only">Date</span></dt>
+          <dd id="infoDate"></dd>
+        </div>
+        <div class="meta-row">
+          <dt><svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg><span class="sr-only">Time</span></dt>
+          <dd id="infoTime"></dd>
+        </div>
+        <div class="meta-row">
+          <dt><svg class="ic" aria-hidden="true"><use href="#i-user"/></svg><span class="sr-only">Booked by</span></dt>
+          <dd><span class="meta-k">Booked by</span> <span class="meta-v" id="infoEmail"></span></dd>
+        </div>
+      </dl>
+
+      <div class="sheet-actions sheet-actions-stack" id="infoActions">
+        <button type="button" class="jovi-btn jovi-btn-danger" id="cancelOpen">Cancel reservation</button>
+        <button type="button" class="jovi-btn jovi-btn-ghost" data-close>Close</button>
+      </div>
+
+      <form id="cancelForm" class="cancel-form" novalidate hidden>
+        <p class="cancel-note">
+          This removes the whole reservation, including all of its weekly repeats.
+          Enter the admin password to confirm.
+        </p>
+        <label class="jovi-label" for="adminPw">Admin password</label>
+        <input class="jovi-input" type="password" id="adminPw" autocomplete="current-password"
+               enterkeyhint="done" required>
+        <div class="jovi-alert jovi-alert-danger" id="infoError" role="alert" hidden></div>
+        <div class="sheet-actions">
+          <button type="button" class="jovi-btn jovi-btn-ghost" id="cancelBack">Back</button>
+          <button type="submit" class="jovi-btn jovi-btn-danger-solid" id="cancelConfirm">Confirm cancellation</button>
+        </div>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- ======= AVISOS (TOASTS) ======= -->
+  <div class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></div>
 </body>
 </html>

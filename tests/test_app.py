@@ -3,6 +3,7 @@
 # ===========================
 # Rodar com:  python3 -m pytest -q tests
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -532,6 +533,57 @@ def test_script_js_usa_a_base_injetada():
     assert 'const BASE = window.SALAS_BASE || "";' in js
     assert 'fetch("/' not in js and "fetch('/" not in js and "fetch(`/" not in js
     assert js.count('fetch(BASE + "/api/reservas') == 3
+
+
+def test_pagina_viewport_sem_maximum_scale_e_theme_color(client):
+    html = client.get("/").get_data(as_text=True)
+    assert '<meta name="viewport" content="width=device-width, initial-scale=1">' in html
+    assert "maximum-scale" not in html and "user-scalable" not in html  # zoom liberado
+    assert '<meta name="theme-color" content="#0E04C2">' in html
+    assert '<meta name="referrer" content="no-referrer"' in html
+    assert '<html lang="en">' in html
+
+
+def test_pagina_ganchos_do_novo_visual(client):
+    html = client.get("/").get_data(as_text=True)
+    # a base vem antes do script do app, que é carregado com defer
+    assert html.index("window.SALAS_BASE") < html.index('<script defer src="/static/script.js')
+    assert 'src="/static/jovi_logo_topbar.png"' in html
+    assert html.count('maxlength="200"') == 2  # título e e-mail
+    for gancho in ('id="schedule"', 'id="days"', 'id="weekLabel"', 'id="prevWeek"', 'id="nextWeek"',
+                   'id="todayBtn"', 'id="bookSheet"', 'id="infoSheet"', 'id="toasts"', 'role="switch"'):
+        assert gancho in html
+    assert "Developed by <strong>Arthur Braga</strong> — Branch Office São Paulo" in html
+    # nada de JS externo; o único recurso de fora é a fonte do selo (Google Fonts)
+    assert '<script src="http' not in html and "<script defer src=\"http" not in html
+    externos = {u.split("/")[2] for u in re.findall(r'(?:href|src)="(https?://[^"]+)"', html)}
+    assert externos <= {"fonts.googleapis.com", "fonts.gstatic.com"}
+
+
+def test_logo_da_topbar_servida_e_leve(client):
+    import struct
+    res = client.get("/static/jovi_logo_topbar.png")
+    assert res.status_code == 200 and res.content_type == "image/png"
+    assert_cabecalhos_privados(res)
+    dados = res.data
+    assert dados[:8] == b"\x89PNG\r\n\x1a\n"
+    largura, altura = struct.unpack(">II", dados[16:24])
+    assert 240 <= largura <= 400 and altura < largura
+    assert len(dados) < 20 * 1024
+    res.close()
+    # a original continua no lugar
+    original = client.get("/static/jovi_logo.png")
+    assert original.status_code == 200 and original.content_type == "image/png"
+    original.close()
+
+
+def test_script_js_seguro_e_sala_unica():
+    with open(os.path.join(RAIZ, "static", "script.js"), encoding="utf-8") as f:
+        js = f.read()
+    assert 'id: "samba"' in js and js.count('"samba"') == 1  # a sala fica numa constante só
+    for proibido in ("alert(", "prompt(", "confirm(", "eval(", "document.write"):
+        assert proibido not in js
+    assert "function esc(" in js and "localStorage" in js
 
 
 @pytest.mark.parametrize("caminho", ["", "/"])

@@ -308,8 +308,10 @@ def test_pagina_de_salas_e_estaticos_sob_o_prefixo(montado, final):
     assert '<meta name="robots" content="noindex, nofollow"' in html
     assert_privado(res)
 
-    for nome, tipo in [("style.css", "text/css"), ("script.js", "javascript"), ("jovi_logo.png", "image/png")]:
-        assert f"{PREFIXO}/static/{nome}" in html
+    for nome, tipo in [("style.css", "text/css"), ("script.js", "javascript"), ("jovi_logo_topbar.png", "image/png"),
+                       ("jovi_logo.png", "image/png")]:
+        if nome != "jovi_logo.png":  # a logo original continua servida, mas a página usa a cópia leve
+            assert f"{PREFIXO}/static/{nome}" in html
         estatico = c.get(f"{PREFIXO}/static/{nome}")
         assert estatico.status_code == 200 and tipo in estatico.content_type
         with open(os.path.join(RAIZ, "static", nome), "rb") as f:
